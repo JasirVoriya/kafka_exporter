@@ -54,7 +54,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>cn.voriya.kafka.producer.ProducerApplication</mainClass>
+                            <mainClass>cn.voriya.kafka.metrics.ExporterApplication</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
