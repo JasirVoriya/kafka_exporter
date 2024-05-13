@@ -17,20 +17,32 @@ public class KafkaCollector extends Collector {
 
         ArrayList<ConsumerTopicPartitionOffsetMetric> consumerTopicPartitionOffsetMetrics = ConsumerTopicPartitionOffset.get(Config.BROKER_LIST);
         // Your code to get metrics
-        ArrayList<MetricFamilySamples.Sample> consumerSamples = new ArrayList<>();
+        ArrayList<MetricFamilySamples.Sample> consumerOffsetSamples = new ArrayList<>();
+        ArrayList<MetricFamilySamples.Sample> consumerLagSamples = new ArrayList<>();
         for (ConsumerTopicPartitionOffsetMetric metric : consumerTopicPartitionOffsetMetrics) {
-            consumerSamples.add(new MetricFamilySamples.Sample(
-                    ConsumerTopicPartitionOffsetMetric.METRIC_NAME,
+            consumerOffsetSamples.add(new MetricFamilySamples.Sample(
+                    ConsumerTopicPartitionOffsetMetric.METRIC_NAME_OFFSET,
                     List.of(ConsumerTopicPartitionOffsetMetric.HEADERS),
                     Arrays.asList(metric.toArray()),
-                    1
+                    metric.getOffset()
+            ));
+            consumerLagSamples.add(new MetricFamilySamples.Sample(
+                    ConsumerTopicPartitionOffsetMetric.METRIC_NAME_LAG,
+                    List.of(ConsumerTopicPartitionOffsetMetric.HEADERS),
+                    Arrays.asList(metric.toArray()),
+                    metric.getLag()
             ));
         }
         kafkaMetricFamilySamples.add(new MetricFamilySamples(
-                ConsumerTopicPartitionOffsetMetric.METRIC_NAME,
+                ConsumerTopicPartitionOffsetMetric.METRIC_NAME_OFFSET,
                 Type.GAUGE,
                 "help",
-                consumerSamples));
+                consumerOffsetSamples));
+        kafkaMetricFamilySamples.add(new MetricFamilySamples(
+                ConsumerTopicPartitionOffsetMetric.METRIC_NAME_LAG,
+                Type.GAUGE,
+                "help",
+                consumerLagSamples));
         ArrayList<TopicPartitionOffsetMetric> topicPartitionOffsetMetrics = TopicPartitionOffset.get(Config.BROKER_LIST);
         ArrayList<MetricFamilySamples.Sample> topicSamples = new ArrayList<>();
         for (TopicPartitionOffsetMetric metric : topicPartitionOffsetMetrics) {
@@ -38,7 +50,7 @@ public class KafkaCollector extends Collector {
                     TopicPartitionOffsetMetric.METRIC_NAME,
                     List.of(TopicPartitionOffsetMetric.HEADERS),
                     Arrays.asList(metric.toArray()),
-                    1
+                    metric.getOffset()
             ));
         }
         kafkaMetricFamilySamples.add(new MetricFamilySamples(

@@ -9,7 +9,6 @@ public class TopicPartitionOffsetMetric {
     public static final String[] HEADERS = new String[] {
         "topic",
         "partition",
-        "offset",
         "leader"
     };
     public static final String METRIC_NAME = "kafka_topic_partition_offset";
@@ -22,7 +21,6 @@ public class TopicPartitionOffsetMetric {
         return new String[] {
             topic,
             String.valueOf(partition),
-            String.valueOf(offset),
             leader
         };
     }

@@ -7,18 +7,16 @@ import lombok.Data;
 @AllArgsConstructor
 public class ConsumerTopicPartitionOffsetMetric {
     public static final String[] HEADERS = new String[] {
-        "consumer-group",
+        "consumer_group",
         "topic",
         "partition",
         "coordinator",
-        "offset",
-        "logEndOffset",
-        "lag",
-        "consumerId",
+        "consumer_id",
         "host",
-        "clientId"
+        "client_id"
     };
-    public static final String METRIC_NAME = "kafka_consumer_topic_partition_offset";
+    public static final String METRIC_NAME_OFFSET = "kafka_consumer_topic_partition_offset";
+    public static final String METRIC_NAME_LAG = "kafka_consumer_topic_partition_lag";
     private String consumerGroup;
     private String topic;
     private Integer partition;
@@ -36,9 +34,6 @@ public class ConsumerTopicPartitionOffsetMetric {
             topic,
             String.valueOf(partition),
             coordinator,
-            String.valueOf(offset),
-            String.valueOf(logEndOffset),
-            String.valueOf(lag),
             consumerId,
             host,
             clientId
