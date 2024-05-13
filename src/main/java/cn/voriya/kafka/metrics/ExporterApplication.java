@@ -10,7 +10,7 @@ public class ExporterApplication {
     @SneakyThrows
     public static void main(String[] args) {
         if(args.length <1 ) {
-            log.error("Usage: java -jar kafka-metrics-exporter.jar <broker-list>");
+            log.error("Usage: java -jar kafka-exporter.jar <broker-list>");
             System.exit(1);
         }
         log.info("broker list: {}", args[0]);
