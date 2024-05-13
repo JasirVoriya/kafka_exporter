@@ -33,11 +33,11 @@ public class MissColumnValues {
     public static final MissColumnValueString STRING = new MissColumnValueString();
 
     public static <T> AbstractMissColumnValue<T> getDefault(Class<T> clazz) {
-        return new AbstractMissColumnValue<T>() {
+        return new AbstractMissColumnValue<>() {
             @SneakyThrows
             @Override
             protected void setValue() {
-                VALUE= clazz.newInstance();
+                VALUE = clazz.getConstructor().newInstance();
             }
         };
     }
