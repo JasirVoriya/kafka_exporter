@@ -64,6 +64,7 @@ public class ConsumerTopicPartitionOffset {
                     group,
                     topic,
                     partition,
+                    "No Leader",
                     String.format("%s:%d", coordinator.host(), coordinator.port()),
                     offset,
                     logEndOffset,
