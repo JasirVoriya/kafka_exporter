@@ -42,7 +42,12 @@ public class TopicPartitionOffset {
         //查询的topic，为空则查询所有topic
         ListSet<String> topics = new ListSet<>();
         //获取topic元数据
-        Seq<TopicMetadata> topicMetadataSeq = ClientUtils.fetchTopicMetadata(topics, brokerEndPointSeq, CLIENT_ID, 10000, 10000).topicsMetadata();
+        Seq<TopicMetadata> topicMetadataSeq;
+        try {
+            topicMetadataSeq = ClientUtils.fetchTopicMetadata(topics, brokerEndPointSeq, CLIENT_ID, 10000, 100000).topicsMetadata();
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
         ArrayList<TopicPartitionOffsetMetric> metrics = new ArrayList<>();
         //遍历topic元数据
         Iterator<TopicMetadata> topicMetadataIterator = topicMetadataSeq.iterator();
@@ -89,7 +94,7 @@ public class TopicPartitionOffset {
 
     private static SimpleConsumer getSimpleConsumer(BrokerEndPoint leader) {
         if (!CONSUMER_CACHE.containsKey(leader)) {
-            CONSUMER_CACHE.put(leader, new SimpleConsumer(leader.host(), leader.port(), 10000, 10000, CLIENT_ID));
+            CONSUMER_CACHE.put(leader, new SimpleConsumer(leader.host(), leader.port(), 10000, 100000, CLIENT_ID));
         }
         return CONSUMER_CACHE.get(leader);
     }
