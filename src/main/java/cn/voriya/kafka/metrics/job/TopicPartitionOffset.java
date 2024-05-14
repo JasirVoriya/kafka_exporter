@@ -35,6 +35,8 @@ public class TopicPartitionOffset {
 
     @SneakyThrows
     public static ArrayList<TopicPartitionOffsetMetric> get(String brokerList) {
+        CONSUMER_CACHE.clear();
+        REQUEST_INFO_MAP.clear();
         //解析brokerList
         Seq<BrokerEndPoint> brokerEndPointSeq = ClientUtils.parseBrokerList(brokerList);
         //查询的topic，为空则查询所有topic
