@@ -27,3 +27,6 @@ _✨ For Prometheus ✨_
     <img src="https://img.shields.io/badge/QQ-1838566218-orange?style=flat-square" alt="QQ Chat Group">
   </a>
 </p>
+<p align="center">
+  基于kafka-0.11.0.3版本的监控指标导出器，支持prometheus监控。
+</p>
