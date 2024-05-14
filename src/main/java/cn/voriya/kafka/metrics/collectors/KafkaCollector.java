@@ -22,16 +22,24 @@ public class KafkaCollector extends Collector {
         ArrayList<MetricFamilySamples.Sample> consumerLagSamples = new ArrayList<>();
         //根据topic和partition所拼接的字符串，查找对应的TopicPartitionOffsetMetric
         Map<String, TopicPartitionOffsetMetric> topicPartitionOffsetMetricMap = new HashMap<>();
+        topicPartitionOffsetMetrics.forEach(metric -> topicPartitionOffsetMetricMap.put(metric.getTopic() + "-" + metric.getPartition(), metric));
+        //根据topic和partition所拼接的字符串，查找对应的ConsumerTopicPartitionOffsetMetric
+        Map<String, ConsumerTopicPartitionOffsetMetric> consumerTopicPartitionOffsetMetricMap = new HashMap<>();
+        consumerTopicPartitionOffsetMetrics.forEach(metric -> consumerTopicPartitionOffsetMetricMap.put(metric.getTopic() + "-" + metric.getPartition(), metric));
         //开始生成metric
         for (TopicPartitionOffsetMetric metric : topicPartitionOffsetMetrics) {
+            //根据topic和partition所拼接的字符串，查找对应的ConsumerTopicPartitionOffsetMetric
+            ConsumerTopicPartitionOffsetMetric consumerTopicPartitionOffsetMetric = consumerTopicPartitionOffsetMetricMap.get(metric.getTopic() + "-" + metric.getPartition());
+            //如果找到了，将endOffset赋值给metric
+            if (consumerTopicPartitionOffsetMetric != null) {
+                metric.setOffset(consumerTopicPartitionOffsetMetric.getLogEndOffset());
+            }
             offsetSamples.add(new MetricFamilySamples.Sample(
                     TopicPartitionOffsetMetric.METRIC_NAME,
                     List.of(TopicPartitionOffsetMetric.HEADERS),
                     Arrays.asList(metric.toArray()),
                     metric.getOffset()
             ));
-            //将topic和partition所拼接的字符串作为key，metric作为value，放入map
-            topicPartitionOffsetMetricMap.put(metric.getTopic() + "-" + metric.getPartition(), metric);
         }
         for (ConsumerTopicPartitionOffsetMetric metric : consumerTopicPartitionOffsetMetrics) {
             //根据topic和partition所拼接的字符串，查找对应的TopicPartitionOffsetMetric
