@@ -6,11 +6,23 @@ import cn.voriya.kafka.metrics.entity.TopicPartitionOffsetMetric;
 import cn.voriya.kafka.metrics.job.ConsumerTopicPartitionOffset;
 import cn.voriya.kafka.metrics.job.TopicPartitionOffset;
 import io.prometheus.client.Collector;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 
+@Slf4j
 public class KafkaCollector extends Collector {
+    @Override
     public List<MetricFamilySamples> collect() {
+        try{
+            return getKafkaMetrics();
+        } catch (Exception e) {
+            log.error("Failed to collect kafka metrics", e);
+            return new ArrayList<>();
+        }
+    }
+
+    private List<MetricFamilySamples> getKafkaMetrics() {
         List<MetricFamilySamples> kafkaMetricFamilySamples = new ArrayList<>();
         //查询所有topic的offset
         ArrayList<TopicPartitionOffsetMetric> topicPartitionOffsetMetrics = TopicPartitionOffset.get(Config.BROKER_LIST);
@@ -78,4 +90,5 @@ public class KafkaCollector extends Collector {
                 consumerLagSamples));
         return kafkaMetricFamilySamples;
     }
+
 }
