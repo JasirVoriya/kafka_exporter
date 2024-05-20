@@ -4,18 +4,21 @@ import cn.voriya.kafka.metrics.column.MissColumnValues;
 import cn.voriya.kafka.metrics.entity.ConsumerTopicPartitionOffsetMetric;
 import cn.voriya.kafka.metrics.thread.ThreadPool;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.Node;
 import scala.Option;
 import scala.Tuple2;
 import scala.collection.Iterator;
 import scala.collection.Seq;
 import scala.collection.immutable.List;
+import scala.collection.immutable.List$;
 
 import java.util.ArrayList;
 import java.util.concurrent.Future;
 
 import static kafka.admin.ConsumerGroupCommand.*;
 
+@Slf4j
 public class ConsumerTopicPartitionOffset {
     @SneakyThrows
     public static ArrayList<ConsumerTopicPartitionOffsetMetric> get(String brokerList) {
@@ -80,14 +83,36 @@ public class ConsumerTopicPartitionOffset {
 
     private static List<String> listGroups(String brokerList) {
         String[] args = {"--bootstrap-server", brokerList};
-        KafkaConsumerGroupService consumerGroupService = getKafkaConsumerGroupService(args);
-        return consumerGroupService.listGroups();
+        List<String> groups = List$.MODULE$.empty();
+        KafkaConsumerGroupService consumerGroupService = null;
+        try {
+            consumerGroupService = getKafkaConsumerGroupService(args);
+            groups = consumerGroupService.listGroups();
+        } catch (Exception e) {
+            log.error("Failed to list groups", e);
+        } finally {
+            if (consumerGroupService != null) {
+                consumerGroupService.close();
+            }
+        }
+        return groups;
     }
 
     private static Tuple2<Option<String>, Option<Seq<PartitionAssignmentState>>> getGroupInfo(String brokerList, String group) {
         String[] args = {"--bootstrap-server", brokerList, "--group", group, "--describe"};
-        KafkaConsumerGroupService consumerGroupService = getKafkaConsumerGroupService(args);
-        return consumerGroupService.describeGroup();
+        KafkaConsumerGroupService consumerGroupService = null;
+        Tuple2<Option<String>, Option<Seq<PartitionAssignmentState>>> describedGroup = new Tuple2<>(Option.empty(), Option.empty());
+        try {
+            consumerGroupService = getKafkaConsumerGroupService(args);
+            describedGroup = consumerGroupService.describeGroup();
+        }catch (Exception e) {
+            log.error("Failed to describe group", e);
+        } finally {
+            if (consumerGroupService != null) {
+                consumerGroupService.close();
+            }
+        }
+        return describedGroup;
     }
 
     private static KafkaConsumerGroupService getKafkaConsumerGroupService(String[] args) {
