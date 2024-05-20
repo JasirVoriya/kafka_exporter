@@ -10,15 +10,17 @@ import java.util.TimeZone;
 public class ExporterApplication {
     public static void main(String[] args) {
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Shanghai"));
-        if(args.length <1 ) {
-            log.error("Usage: java -jar kafka-exporter.jar <broker-list>");
+        if (args.length < 2) {
+            log.error("Usage: java -jar kafka_exporter.jar <broker-list> <port>");
             System.exit(1);
         }
-        log.info("broker list: {}", args[0]);
         Config.BROKER_LIST = args[0];
-        try (HTTPServer ignored = new HTTPServer(1234)) {
+        int port = Integer.parseInt(args[1]);
+        log.info("broker list: {}", args[0]);
+        log.info("port: {}", args[1]);
+        try (HTTPServer ignored = new HTTPServer(port)) {
             new KafkaCollector().register();
-            log.info("server started on port 1234");
+            log.info("server started on port {}", port);
             log.info("Kafka Exporter started");
             Thread.currentThread().join();
         } catch (Throwable t) {
