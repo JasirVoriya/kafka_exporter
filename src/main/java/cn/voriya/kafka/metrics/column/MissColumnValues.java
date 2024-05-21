@@ -2,7 +2,7 @@ package cn.voriya.kafka.metrics.column;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import lombok.SneakyThrows;
+import org.apache.kafka.common.Node;
 
 class MissColumnValueInteger extends AbstractMissColumnValue<Integer> {
     @Override
@@ -26,19 +26,17 @@ class MissColumnValueString extends AbstractMissColumnValue<String> {
     }
 }
 
+class MissColumnValueNode extends AbstractMissColumnValue<Node> {
+    @Override
+    protected void setValue() {
+        VALUE = new Node(-1, "Not found", -1);
+    }
+}
+
 @NoArgsConstructor(access = AccessLevel.MODULE)
 public class MissColumnValues {
     public static final MissColumnValueInteger INTEGER = new MissColumnValueInteger();
     public static final MissColumnValueLong LONG = new MissColumnValueLong();
     public static final MissColumnValueString STRING = new MissColumnValueString();
-
-    public static <T> AbstractMissColumnValue<T> getDefault(Class<T> clazz) {
-        return new AbstractMissColumnValue<>() {
-            @SneakyThrows
-            @Override
-            protected void setValue() {
-                VALUE = clazz.getConstructor().newInstance();
-            }
-        };
-    }
+    public static final MissColumnValueNode NODE = new MissColumnValueNode();
 }

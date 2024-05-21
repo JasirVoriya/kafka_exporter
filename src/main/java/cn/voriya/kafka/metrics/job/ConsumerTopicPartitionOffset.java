@@ -3,7 +3,6 @@ package cn.voriya.kafka.metrics.job;
 import cn.voriya.kafka.metrics.column.MissColumnValues;
 import cn.voriya.kafka.metrics.entity.ConsumerTopicPartitionOffsetMetric;
 import cn.voriya.kafka.metrics.thread.ThreadPool;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.Node;
 import scala.Option;
@@ -14,13 +13,13 @@ import scala.collection.immutable.List;
 import scala.collection.immutable.List$;
 
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static kafka.admin.ConsumerGroupCommand.*;
 
 @Slf4j
 public class ConsumerTopicPartitionOffset {
-    @SneakyThrows
     public static ArrayList<ConsumerTopicPartitionOffsetMetric> get(String brokerList) {
         ArrayList<ConsumerTopicPartitionOffsetMetric> metrics = new ArrayList<>();
         ArrayList<Future<ArrayList<ConsumerTopicPartitionOffsetMetric>>> futures = new ArrayList<>();
@@ -37,8 +36,13 @@ public class ConsumerTopicPartitionOffset {
         }
         //获取所有消费者组的消费信息，合并到一个列表
         for (Future<ArrayList<ConsumerTopicPartitionOffsetMetric>> future : futures) {
-            ArrayList<ConsumerTopicPartitionOffsetMetric> offsetMetrics = future.get();
-            metrics.addAll(offsetMetrics);
+            ArrayList<ConsumerTopicPartitionOffsetMetric> offsetMetrics;
+            try {
+                offsetMetrics = future.get();
+                metrics.addAll(offsetMetrics);
+            } catch (InterruptedException | ExecutionException e) {
+                log.error("Failed to get consumer group metrics", e);
+            }
         }
         //返回所有消费者组的消费信息
         return metrics;
@@ -56,7 +60,7 @@ public class ConsumerTopicPartitionOffset {
             PartitionAssignmentState partitionAssignmentState = partitionAssignmentStateIterator.next();
             String topic = partitionAssignmentState.topic().getOrElse(MissColumnValues.STRING);
             Integer partition = partitionAssignmentState.partition().getOrElse(MissColumnValues.INTEGER);
-            Node coordinator = partitionAssignmentState.coordinator().getOrElse(MissColumnValues.getDefault(Node.class));
+            Node coordinator = partitionAssignmentState.coordinator().getOrElse(MissColumnValues.NODE);
             Long offset = partitionAssignmentState.offset().getOrElse(MissColumnValues.LONG);
             Long logEndOffset = partitionAssignmentState.logEndOffset().getOrElse(MissColumnValues.LONG);
             Long lag = partitionAssignmentState.lag().getOrElse(MissColumnValues.LONG);

@@ -3,6 +3,9 @@ package cn.voriya.kafka.metrics.column;
 import scala.Function0;
 
 public abstract class AbstractMissColumnValue<R> implements Function0<R> {
+    public AbstractMissColumnValue() {
+        setValue();
+    }
     public R VALUE;
 
     protected abstract void setValue();
