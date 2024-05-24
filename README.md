@@ -93,3 +93,6 @@ The exporter will expose the following metrics:
 | `kafka_topic_offset`                 | a topic's offset sum                       |
 | `kafka_consumer_topic_offset`        | a consumer's offset sum in a topic         |
 | `kafka_consumer_topic_lag`           | a consumer's lag sum in a topic            |
+
+## Star ⭐
+[![Stargazers over time](https://starchart.cc/JasirVoriya/kafka_exporter.svg?variant=adaptive)](https://starchart.cc/JasirVoriya/kafka_exporter)
