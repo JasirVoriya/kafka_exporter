@@ -109,6 +109,31 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.2.0</version> <!-- 使用适合你项目的版本 -->
+                <executions>
+                    <execution>
+                        <id>copy-resources</id>
+                        <phase>validate</phase> <!-- 绑定到validate阶段，或根据需求选择其他合适的生命周期阶段 -->
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}</outputDirectory> <!-- 指定目标目录，通常是target目录 -->
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources</directory> <!-- 源目录 -->
+                                    <includes>
+                                        <include>conf.yaml</include> <!-- 指定要复制的文件 -->
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
