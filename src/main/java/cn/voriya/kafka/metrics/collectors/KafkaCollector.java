@@ -6,11 +6,11 @@ import cn.voriya.kafka.metrics.entity.TopicPartitionOffsetMetric;
 import cn.voriya.kafka.metrics.job.ConsumerTopicPartitionOffset;
 import cn.voriya.kafka.metrics.job.TopicPartitionOffset;
 import io.prometheus.client.Collector;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.*;
 
-@Slf4j
+@Log4j2
 public class KafkaCollector extends Collector {
     private static final String kafkaTopicOffset = "kafka_topic_offset";
     private static final String kafkaTopicBrokerOffset = "kafka_topic_broker_offset";

@@ -3,7 +3,7 @@ package cn.voriya.kafka.metrics.job;
 import cn.voriya.kafka.metrics.column.MissColumnValues;
 import cn.voriya.kafka.metrics.entity.ConsumerTopicPartitionOffsetMetric;
 import cn.voriya.kafka.metrics.thread.ThreadPool;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.apache.kafka.common.Node;
 import scala.Option;
 import scala.Tuple2;
@@ -18,7 +18,7 @@ import java.util.concurrent.Future;
 
 import static kafka.admin.ConsumerGroupCommand.*;
 
-@Slf4j
+@Log4j2
 public class ConsumerTopicPartitionOffset {
     public static ArrayList<ConsumerTopicPartitionOffsetMetric> get(String brokerList) {
         ArrayList<ConsumerTopicPartitionOffsetMetric> metrics = new ArrayList<>();
