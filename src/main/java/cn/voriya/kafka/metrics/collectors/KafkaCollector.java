@@ -1,12 +1,14 @@
 package cn.voriya.kafka.metrics.collectors;
 
-import cn.voriya.kafka.metrics.Config;
+import cn.voriya.kafka.metrics.config.Config;
+import cn.voriya.kafka.metrics.config.ConfigCluster;
 import cn.voriya.kafka.metrics.entity.ConsumerTopicPartitionOffsetMetric;
 import cn.voriya.kafka.metrics.entity.TopicPartitionOffsetMetric;
 import cn.voriya.kafka.metrics.job.ConsumerTopicPartitionOffset;
 import cn.voriya.kafka.metrics.job.TopicPartitionOffset;
 import io.prometheus.client.Collector;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.time.StopWatch;
 
 import java.util.*;
 
@@ -18,24 +20,42 @@ public class KafkaCollector extends Collector {
     private static final String kafkaConsumerBrokerTopicOffset = "kafka_consumer_broker_topic_offset";
     private static final String kafkaConsumerTopicLag = "kafka_consumer_topic_lag";
     private static final String kafkaConsumerBrokerTopicLag = "kafka_consumer_broker_topic_lag";
+    public static final String kafkaTopicPartitionOffset = "kafka_topic_partition_offset";
+    public static final String kafkaConsumerTopicPartitionOffset = "kafka_consumer_topic_partition_offset";
+    public static final String kafkaConsumerTopicPartitionLag = "kafka_consumer_topic_partition_lag";
     //分隔符
     private static final String DELIMITER = "@&@";
     @Override
     public List<MetricFamilySamples> collect() {
+        Map<String, MetricFamilySamples> samples = new HashMap<>();
+        StopWatch totalStopWatch = StopWatch.createStarted();
         try{
-            return getKafkaMetrics();
+            Config config = Config.getInstance();
+            for (ConfigCluster configCluster : config.getCluster()) {
+                log.info("Start to collect kafka metrics, cluster: [{}]", configCluster.getName());
+                StopWatch clusterStopWatch = StopWatch.createStarted();
+                Map<String, MetricFamilySamples> kafkaMetrics = getKafkaMetrics(configCluster);
+                log.info("Finish to collect kafka metrics, cluster: [{}], time: {}ms", configCluster.getName(), clusterStopWatch.getTime());
+                for (Map.Entry<String, MetricFamilySamples> entry : kafkaMetrics.entrySet()) {
+                    if (!samples.containsKey(entry.getKey())) {
+                        samples.put(entry.getKey(), entry.getValue());
+                        continue;
+                    }
+                    samples.get(entry.getKey()).samples.addAll(entry.getValue().samples);
+                }
+            }
         } catch (Exception e) {
-            log.error("Failed to collect kafka metrics", e);
-            return new ArrayList<>();
+            log.error("Failed to collect kafka metrics, total time: {}ms", totalStopWatch.getTime(), e);
         }
+        log.info("Finish to collect kafka metrics, total time: {}ms", totalStopWatch.getTime());
+        return new ArrayList<>(samples.values());
     }
 
-    private List<MetricFamilySamples> getKafkaMetrics() {
-        List<MetricFamilySamples> kafkaMetricFamilySamples = new ArrayList<>();
+    private Map<String, MetricFamilySamples> getKafkaMetrics(ConfigCluster configCluster) {
         //查询所有topic的offset
-        ArrayList<TopicPartitionOffsetMetric> topicPartitionOffsetMetrics = TopicPartitionOffset.get(Config.BROKER_LIST);
+        ArrayList<TopicPartitionOffsetMetric> topicPartitionOffsetMetrics = TopicPartitionOffset.get(String.join(",", configCluster.getBrokers()));
         //查询所有消费者组的offset和lag
-        ArrayList<ConsumerTopicPartitionOffsetMetric> consumerTopicPartitionOffsetMetrics = ConsumerTopicPartitionOffset.get(Config.BROKER_LIST);
+        ArrayList<ConsumerTopicPartitionOffsetMetric> consumerTopicPartitionOffsetMetrics = ConsumerTopicPartitionOffset.get(String.join(",", configCluster.getBrokers()));
         //三个partition维度的metric
         ArrayList<MetricFamilySamples.Sample> partitionOffsetSamples = new ArrayList<>();
         ArrayList<MetricFamilySamples.Sample> consumerPartitionOffsetSamples = new ArrayList<>();
@@ -69,9 +89,9 @@ public class KafkaCollector extends Collector {
             }
             //kafka_topic_partition_offset
             partitionOffsetSamples.add(new MetricFamilySamples.Sample(
-                    TopicPartitionOffsetMetric.METRIC_NAME,
-                    List.of(TopicPartitionOffsetMetric.HEADERS),
-                    Arrays.asList(metric.toArray()),
+                    kafkaTopicPartitionOffset,
+                    List.of("cluster", "topic", "partition", "leader"),
+                    Arrays.asList(configCluster.getName(), metric.getTopic(), String.valueOf(metric.getPartition()), metric.getLeader()),
                     metric.getOffset()
             ));
             String leader = metric.getLeader();
@@ -88,15 +108,15 @@ public class KafkaCollector extends Collector {
                 metric.setLeader(topicPartitionOffsetMetric.getLeader());
             }
             consumerPartitionOffsetSamples.add(new MetricFamilySamples.Sample(
-                    ConsumerTopicPartitionOffsetMetric.METRIC_NAME_OFFSET,
-                    List.of(ConsumerTopicPartitionOffsetMetric.HEADERS),
-                    Arrays.asList(metric.toArray()),
+                    kafkaConsumerTopicPartitionOffset,
+                    List.of("cluster", "consumer_group", "topic", "partition", "leader", "coordinator", "consumer_id", "host", "client_id"),
+                    Arrays.asList(configCluster.getName(), metric.getConsumerGroup(), metric.getTopic(), String.valueOf(metric.getPartition()), metric.getLeader(), metric.getCoordinator(), metric.getConsumerId(), metric.getHost(), metric.getClientId()),
                     metric.getOffset()
             ));
             consumerPartitionLagSamples.add(new MetricFamilySamples.Sample(
-                    ConsumerTopicPartitionOffsetMetric.METRIC_NAME_LAG,
-                    List.of(ConsumerTopicPartitionOffsetMetric.HEADERS),
-                    Arrays.asList(metric.toArray()),
+                    kafkaConsumerTopicPartitionLag,
+                    List.of("cluster", "consumer_group", "topic", "partition", "leader", "coordinator", "consumer_id", "host", "client_id"),
+                    Arrays.asList(configCluster.getName(), metric.getConsumerGroup(), metric.getTopic(), String.valueOf(metric.getPartition()), metric.getLeader(), metric.getCoordinator(), metric.getConsumerId(), metric.getHost(), metric.getClientId()),
                     metric.getLag()
             ));
             String key = metric.getConsumerGroup() + DELIMITER + metric.getTopic();
@@ -112,14 +132,14 @@ public class KafkaCollector extends Collector {
             long totalOffset = brokerOffset.values().stream().mapToLong(Long::longValue).sum();
             topicOffsetSamples.add(new MetricFamilySamples.Sample(
                     kafkaTopicOffset,
-                    List.of("topic"),
-                    List.of(topic),
+                    List.of("cluster", "topic"),
+                    List.of(configCluster.getName(), topic),
                     totalOffset
             ));
             brokerOffset.forEach((broker, offset) -> brokerOffsetSamples.add(new MetricFamilySamples.Sample(
                     kafkaTopicBrokerOffset,
-                    List.of("topic", "broker"),
-                    Arrays.asList(topic, broker),
+                    List.of("cluster", "topic", "broker"),
+                    Arrays.asList(configCluster.getName(), topic, broker),
                     offset
             )));
         });
@@ -129,14 +149,14 @@ public class KafkaCollector extends Collector {
             String topic = key.split(DELIMITER)[1];
             consumerTopicOffsetSamples.add(new MetricFamilySamples.Sample(
                     kafkaConsumerTopicOffset,
-                    List.of("consumer_group", "topic"),
-                    Arrays.asList(consumerGroup, topic),
+                    List.of("cluster", "consumer_group", "topic"),
+                    Arrays.asList(configCluster.getName(), consumerGroup, topic),
                     totalOffset
             ));
             consumerBrokerOffset.forEach((broker, offset) -> consumerBrokerOffsetSamples.add(new MetricFamilySamples.Sample(
                     kafkaConsumerBrokerTopicOffset,
-                    List.of("consumer_group", "topic", "broker"),
-                    Arrays.asList(consumerGroup, topic, broker),
+                    List.of("cluster", "consumer_group", "topic", "broker"),
+                    Arrays.asList(configCluster.getName(), consumerGroup, topic, broker),
                     offset
             )));
         });
@@ -146,66 +166,30 @@ public class KafkaCollector extends Collector {
             String topic = key.split(DELIMITER)[1];
             consumerTopicLagSamples.add(new MetricFamilySamples.Sample(
                     kafkaConsumerTopicLag,
-                    List.of("consumer_group", "topic"),
-                    Arrays.asList(consumerGroup, topic),
+                    List.of("cluster", "consumer_group", "topic"),
+                    Arrays.asList(configCluster.getName(), consumerGroup, topic),
                     totalLag
             ));
             consumerBrokerLag.forEach((broker, lag) -> consumerBrokerLagSamples.add(new MetricFamilySamples.Sample(
                     kafkaConsumerBrokerTopicLag,
-                    List.of("consumer_group", "topic", "broker"),
-                    Arrays.asList(consumerGroup, topic, broker),
+                    List.of("cluster", "consumer_group", "topic", "broker"),
+                    Arrays.asList(configCluster.getName(), consumerGroup, topic, broker),
                     lag
             )));
         });
         //offset
-        kafkaMetricFamilySamples.add(new MetricFamilySamples(
-                TopicPartitionOffsetMetric.METRIC_NAME,
-                Type.GAUGE,
-                "help",
-                partitionOffsetSamples));
-        kafkaMetricFamilySamples.add(new MetricFamilySamples(
-                kafkaTopicBrokerOffset,
-                Type.GAUGE,
-                "help",
-                brokerOffsetSamples));
-        kafkaMetricFamilySamples.add(new MetricFamilySamples(
-                kafkaTopicOffset,
-                Type.GAUGE,
-                "help",
-                topicOffsetSamples));
         //consumer_offset
-        kafkaMetricFamilySamples.add(new MetricFamilySamples(
-                ConsumerTopicPartitionOffsetMetric.METRIC_NAME_OFFSET,
-                Type.GAUGE,
-                "help",
-                consumerPartitionOffsetSamples));
-        kafkaMetricFamilySamples.add(new MetricFamilySamples(
-                kafkaConsumerBrokerTopicOffset,
-                Type.GAUGE,
-                "help",
-                consumerBrokerOffsetSamples));
-        kafkaMetricFamilySamples.add(new MetricFamilySamples(
-                kafkaConsumerTopicOffset,
-                Type.GAUGE,
-                "help",
-                consumerTopicOffsetSamples));
         //consumer_lag
-        kafkaMetricFamilySamples.add(new MetricFamilySamples(
-                ConsumerTopicPartitionOffsetMetric.METRIC_NAME_LAG,
-                Type.GAUGE,
-                "help",
-                consumerPartitionLagSamples));
-        kafkaMetricFamilySamples.add(new MetricFamilySamples(
-                kafkaConsumerBrokerTopicLag,
-                Type.GAUGE,
-                "help",
-                consumerBrokerLagSamples));
-        kafkaMetricFamilySamples.add(new MetricFamilySamples(
-                kafkaConsumerTopicLag,
-                Type.GAUGE,
-                "help",
-                consumerTopicLagSamples));
-        return kafkaMetricFamilySamples;
+        Map<String, MetricFamilySamples> map = new HashMap<>();
+        map.put(kafkaTopicPartitionOffset, new MetricFamilySamples(kafkaTopicPartitionOffset, Type.GAUGE, "help", partitionOffsetSamples));
+        map.put(kafkaTopicBrokerOffset, new MetricFamilySamples(kafkaTopicBrokerOffset, Type.GAUGE, "help", brokerOffsetSamples));
+        map.put(kafkaTopicOffset, new MetricFamilySamples(kafkaTopicOffset, Type.GAUGE, "help", topicOffsetSamples));
+        map.put(kafkaConsumerTopicPartitionOffset, new MetricFamilySamples(kafkaConsumerTopicPartitionOffset, Type.GAUGE, "help", consumerPartitionOffsetSamples));
+        map.put(kafkaConsumerBrokerTopicOffset, new MetricFamilySamples(kafkaConsumerBrokerTopicOffset, Type.GAUGE, "help", consumerBrokerOffsetSamples));
+        map.put(kafkaConsumerTopicOffset, new MetricFamilySamples(kafkaConsumerTopicOffset, Type.GAUGE, "help", consumerTopicOffsetSamples));
+        map.put(kafkaConsumerTopicPartitionLag, new MetricFamilySamples(kafkaConsumerTopicPartitionLag, Type.GAUGE, "help", consumerPartitionLagSamples));
+        map.put(kafkaConsumerBrokerTopicLag, new MetricFamilySamples(kafkaConsumerBrokerTopicLag, Type.GAUGE, "help", consumerBrokerLagSamples));
+        map.put(kafkaConsumerTopicLag, new MetricFamilySamples(kafkaConsumerTopicLag, Type.GAUGE, "help", consumerTopicLagSamples));
+        return map;
     }
-
 }
