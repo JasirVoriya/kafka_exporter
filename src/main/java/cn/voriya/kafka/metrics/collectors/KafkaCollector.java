@@ -47,7 +47,7 @@ public class KafkaCollector extends Collector {
         } catch (Exception e) {
             log.error("Failed to collect kafka metrics, total time: {}ms", totalStopWatch.getTime(), e);
         }
-        log.info("Finish to collect kafka metrics, total time: {}ms", totalStopWatch.getTime());
+        log.info("Finish to collect all kafka metrics, total time: {}ms", totalStopWatch.getTime());
         return new ArrayList<>(samples.values());
     }
 
