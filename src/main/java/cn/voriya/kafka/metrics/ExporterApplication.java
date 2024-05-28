@@ -18,7 +18,6 @@ public class ExporterApplication {
         for (ConfigCluster configCluster : config.getCluster()) {
             log.info("cluster: {}", configCluster);
         }
-        log.info("port: {}", port);
         try (HTTPServer ignored = new HTTPServer(port)) {
             new KafkaCollector().register();
             log.info("server started on port {}", port);
