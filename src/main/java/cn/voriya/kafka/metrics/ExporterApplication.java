@@ -11,7 +11,6 @@ import java.util.TimeZone;
 @Log4j2
 public class ExporterApplication {
     public static void main(String[] args) {
-        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Shanghai"));
         Config.parseConfig(Config.getDefaultConfigPath() + "config.yaml");
         Config config = Config.getInstance();
         int port = Integer.parseInt(config.getPort());
