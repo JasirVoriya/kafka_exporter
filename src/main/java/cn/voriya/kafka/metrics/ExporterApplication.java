@@ -6,8 +6,6 @@ import cn.voriya.kafka.metrics.config.ConfigCluster;
 import io.prometheus.client.exporter.HTTPServer;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.TimeZone;
-
 @Log4j2
 public class ExporterApplication {
     public static void main(String[] args) {
