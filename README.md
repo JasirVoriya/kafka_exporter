@@ -28,42 +28,65 @@ _✨ For Prometheus ✨_
 Based on the kafka-0.11.0.3 version of the monitoring index exporter, support prometheus monitoring.
 </p>
 
-## Building
+## Get started
+
+### Building
 
 `mvn clean package` to build.
 
-Then you will get a `kafka_exporter-unsable.jar` in the `target` directory.
-
-## Run
-
-### Run Binary
+Then you will get `kafka_exporter-*.jar` and `conf.yaml` in the `target` directory:
 
 ```shell
-java -jar  kafka_exporter-unsable.jar <host1:port1,host2:port2,host3:port3,...> <listen-port>
+├──   target
+│   ├──  kafka_exporter-*.jar
+└── └──  conf.yaml
 ```
 
-### Exsample
+### Running
 
 ```shell
-java -jar  kafka_exporter-unsable.jar 192.168.31.110:9092,192.168.31.111:9092,192.168.31.112:9092 1234
+java -jar  kafka_exporter-*.jar
 ```
 
-The above command will start the exporter and listen on port 1234,console will print following message:
+The above command will load the `conf.yaml` file in the current directory and start the exporter, and you will see the following log:
 
 ```shell
-[main][INFO] [2024-05-24 11:29:09] cn.voriya.kafka.metrics.ExporterApplication.main(19) | broker list: 192.168.31.110:9092,192.168.31.111:9092,192.168.31.112:9092
-[main][INFO] [2024-05-24 11:29:09] cn.voriya.kafka.metrics.ExporterApplication.main(20) | port: 1234
-[main][INFO] [2024-05-24 11:29:10] kafka.utils.Logging$class.info(70) | Verifying properties
-[main][INFO] [2024-05-24 11:29:10] kafka.utils.Logging$class.info(70) | Property client.id is overridden to GetOffsetJavaAPI
-[main][INFO] [2024-05-24 11:29:10] kafka.utils.Logging$class.info(70) | Property metadata.broker.list is overridden to 192.168.31.110:9092,192.168.31.111:9092,192.168.31.112:9092
-[main][INFO] [2024-05-24 11:29:10] kafka.utils.Logging$class.info(70) | Property request.timeout.ms is overridden to 10000
-[main][INFO] [2024-05-24 11:29:10] kafka.utils.Logging$class.info(70) | Fetching metadata from broker BrokerEndPoint(3,192.168.31.112,9092) with correlation id 100000 for 0 topic(s) ListSet()
-[main][INFO] [2024-05-24 11:29:10] kafka.utils.Logging$class.info(70) | Connected to 192.168.31.112:9092 for producing
-[main][INFO] [2024-05-24 11:29:10] kafka.utils.Logging$class.info(70) | Disconnecting from 192.168.31.112:9092
-[main][INFO] [2024-05-24 11:29:16] cn.voriya.kafka.metrics.ExporterApplication.main(23) | server started on port 1234
-[main][INFO] [2024-05-24 11:29:16] cn.voriya.kafka.metrics.ExporterApplication.main(24) | Kafka Exporter started
+[main][INFO] [2024-05-28 15:15:01] cn.voriya.kafka.metrics.ExporterApplication.main(16) | cluster: ConfigCluster(name=test1, brokers=[127.0.0.1:9092, 127.0.0.2:9092, 127.0.0.3:9092, 127.0.0.4:9092])
+[main][INFO] [2024-05-28 15:15:01] cn.voriya.kafka.metrics.ExporterApplication.main(16) | cluster: ConfigCluster(name=test2, brokers=[127.0.0.5:9092, 127.0.0.6:9092, 127.0.0.7:9092, 127.0.0.8:9092])
+[main][INFO] [2024-05-28 15:26:23] cn.voriya.kafka.metrics.collectors.KafkaCollector.collect(35) | Start to collect kafka metrics, cluster: [test1]
+[main][INFO] [2024-05-28 15:26:26] cn.voriya.kafka.metrics.collectors.KafkaCollector.collect(38) | Finish to collect kafka metrics, cluster: [test1], time: 3069ms
+[main][INFO] [2024-05-28 15:26:26] cn.voriya.kafka.metrics.collectors.KafkaCollector.collect(35) | Start to collect kafka metrics, cluster: [test2]
+[main][INFO] [2024-05-28 15:26:27] cn.voriya.kafka.metrics.collectors.KafkaCollector.collect(38) | Finish to collect kafka metrics, cluster: [test2], time: 902ms
+[main][INFO] [2024-05-28 15:26:27] cn.voriya.kafka.metrics.collectors.KafkaCollector.collect(50) | Finish to collect all kafka metrics, total time: 3975ms
+[main][INFO] [2024-05-28 15:26:27] cn.voriya.kafka.metrics.ExporterApplication.main(20) | server started on port 1234
+[main][INFO] [2024-05-28 15:26:27] cn.voriya.kafka.metrics.ExporterApplication.main(21) | Kafka Exporter started
 ```
 If you see the above message, it means the exporter has started successfully, and you can access the metrics by visiting `http://localhost:1234/metrics`.
+
+## Configures
+
+The exporter uses `conf.yaml` to configure the kafka cluster information, you can modify the `conf.yaml` to add or
+remove the kafka cluster information.
+
+```yaml
+cluster:
+  - name: test1
+    brokers: [ 127.0.0.1:9092,127.0.0.2:9092,127.0.0.3:9092,127.0.0.4:9092 ]
+  - name: test2
+    brokers: [ 127.0.0.5:9092,127.0.0.6:9092,127.0.0.7:9092,127.0.0.8:9092 ]
+port: 1234
+```
+
+The `conf.yaml` file contains the following fields:
+
+| Field             | Type   | Description                                                             | Default | Required |
+|-------------------|--------|-------------------------------------------------------------------------|---------|----------|
+| `cluster`         | Array  | The kafka cluster information, each cluster contains a name and brokers |         | Yes      |
+| `cluster.name`    | String | The cluster name                                                        |         | Yes      |
+| `cluster.brokers` | Array  | The kafka brokers information, each broker contains a host and port     |         | Yes      |
+| `port`            | Number | The exporter listen port                                                | 1234    | No       |
+
+You can add one or more kafka clusters to the `cluster` field, and the exporter will collect the metrics for each cluster.
 
 ## Metrics
 
