@@ -2,15 +2,46 @@
 <Configuration status="WARN">
     <Properties>
         <Property name="LOG_PATTERN">[%t][%p] [%d{yyyy-MM-dd HH:mm:ss}{Asia/Shanghai}] %C.%M(%L) | %m%n</Property>
+        <Property name="LOG_PATH">./logs</Property>
     </Properties>
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="${LOG_PATTERN}"/>
         </Console>
+        <RollingFile name="FileError" fileName="${LOG_PATH}/error/error.log" filePattern="${LOG_PATH}/error/error.log.%d{yyyy-MM-dd}.%i.log">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="20 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="14"/>
+            <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY"/>
+        </RollingFile>
+        <RollingFile name="FileWarn" fileName="${LOG_PATH}/warn/warn.log" filePattern="${LOG_PATH}/warn/warn.log.%d{yyyy-MM-dd}.%i.log">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="20 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="14"/>
+            <ThresholdFilter level="warn" onMatch="ACCEPT" onMismatch="DENY"/>
+        </RollingFile>
+        <RollingFile name="FileInfo" fileName="${LOG_PATH}/info/info.log" filePattern="${LOG_PATH}/info/info.log.%d{yyyy-MM-dd}.%i.log">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="20 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="14"/>
+            <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
+        </RollingFile>
     </Appenders>
     <Loggers>
         <Root level="debug">
             <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileError"/>
+            <AppenderRef ref="FileWarn"/>
+            <AppenderRef ref="FileInfo"/>
         </Root>
     </Loggers>
 </Configuration>
