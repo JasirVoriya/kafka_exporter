@@ -45,7 +45,7 @@ Then you will get `kafka_exporter-*.jar` and `conf.yaml` in the `target` directo
 ### Running
 
 ```shell
-java -jar  kafka_exporter-*.jar
+java -jar  ./target/kafka_exporter-*.jar
 ```
 
 The above command will load the `conf.yaml` file in the current directory and start the exporter, and you will see the following log:
