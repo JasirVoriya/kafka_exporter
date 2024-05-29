@@ -36,7 +36,7 @@ public class KafkaCollector extends Collector {
             List<Future<Map<String, MetricFamilySamples>>> futures = new ArrayList<>();
             //每个集群提交到一个线程里面去采集
             for (ConfigCluster configCluster : config.getCluster()) {
-                futures.add(ThreadPool.CONSUMER_METRICS_POOL.submit(() -> {
+                futures.add(ThreadPool.CONSUMERS_POOL.submit(() -> {
                     log.info("Start to collect kafka metrics, cluster: [{}]", configCluster.getName());
                     StopWatch clusterStopWatch = StopWatch.createStarted();
                     Map<String, MetricFamilySamples> kafkaMetrics = getKafkaMetrics(configCluster);

@@ -8,10 +8,14 @@ import java.util.concurrent.TimeUnit;
 
 public class ThreadPool {
     public static final ThreadPoolExecutor CONSUMER_METRICS_POOL = new ThreadPoolExecutor(
-            Runtime.getRuntime().availableProcessors(),
-            Runtime.getRuntime().availableProcessors(),
+            Runtime.getRuntime().availableProcessors() * 2,
+            Runtime.getRuntime().availableProcessors() * 2,
             0,
             TimeUnit.MINUTES,
             new ArrayBlockingQueue<>(1000),
             new ThreadFactoryBuilder().setNameFormat("kafka-metrics-%d").setDaemon(true).build());
+    public static final ThreadPoolExecutor CONSUMERS_POOL = new ThreadPoolExecutor(5, 5, 0,
+            TimeUnit.MINUTES,
+            new ArrayBlockingQueue<>(1000),
+            new ThreadFactoryBuilder().setNameFormat("kafka-consumers-%d").setDaemon(true).build());
 }
