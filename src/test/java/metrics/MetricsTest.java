@@ -2,8 +2,8 @@ package metrics;
 
 import cn.voriya.kafka.metrics.entity.ConsumerTopicPartitionOffsetMetric;
 import cn.voriya.kafka.metrics.entity.TopicPartitionOffsetMetric;
-import cn.voriya.kafka.metrics.job.ConsumerTopicPartitionOffset;
-import cn.voriya.kafka.metrics.job.TopicPartitionOffset;
+import cn.voriya.kafka.metrics.request.ConsumerTopicPartitionOffset;
+import cn.voriya.kafka.metrics.request.TopicPartitionOffset;
 import lombok.SneakyThrows;
 
 import java.util.ArrayList;

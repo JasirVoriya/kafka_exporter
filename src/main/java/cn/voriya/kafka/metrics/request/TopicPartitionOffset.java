@@ -1,4 +1,4 @@
-package cn.voriya.kafka.metrics.job;
+package cn.voriya.kafka.metrics.request;
 
 import cn.voriya.kafka.metrics.entity.TopicPartitionOffsetMetric;
 import kafka.api.*;
