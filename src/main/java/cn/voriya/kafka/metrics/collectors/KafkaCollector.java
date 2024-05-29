@@ -6,11 +6,13 @@ import cn.voriya.kafka.metrics.entity.ConsumerTopicPartitionOffsetMetric;
 import cn.voriya.kafka.metrics.entity.TopicPartitionOffsetMetric;
 import cn.voriya.kafka.metrics.job.ConsumerTopicPartitionOffset;
 import cn.voriya.kafka.metrics.job.TopicPartitionOffset;
+import cn.voriya.kafka.metrics.thread.ThreadPool;
 import io.prometheus.client.Collector;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.time.StopWatch;
 
 import java.util.*;
+import java.util.concurrent.Future;
 
 @Log4j2
 public class KafkaCollector extends Collector {
@@ -31,11 +33,20 @@ public class KafkaCollector extends Collector {
         StopWatch totalStopWatch = StopWatch.createStarted();
         try{
             Config config = Config.getInstance();
+            List<Future<Map<String, MetricFamilySamples>>> futures = new ArrayList<>();
+            //每个集群提交到一个线程里面去采集
             for (ConfigCluster configCluster : config.getCluster()) {
-                log.info("Start to collect kafka metrics, cluster: [{}]", configCluster.getName());
-                StopWatch clusterStopWatch = StopWatch.createStarted();
-                Map<String, MetricFamilySamples> kafkaMetrics = getKafkaMetrics(configCluster);
-                log.info("Finish to collect kafka metrics, cluster: [{}], time: {}ms", configCluster.getName(), clusterStopWatch.getTime());
+                futures.add(ThreadPool.CONSUMER_METRICS_POOL.submit(() -> {
+                    log.info("Start to collect kafka metrics, cluster: [{}]", configCluster.getName());
+                    StopWatch clusterStopWatch = StopWatch.createStarted();
+                    Map<String, MetricFamilySamples> kafkaMetrics = getKafkaMetrics(configCluster);
+                    log.info("Finish to collect kafka metrics, cluster: [{}], time: {}ms", configCluster.getName(), clusterStopWatch.getTime());
+                    return kafkaMetrics;
+                }));
+            }
+            //获取每个集群的采集结果
+            for (Future<Map<String, MetricFamilySamples>> future : futures) {
+                Map<String, MetricFamilySamples> kafkaMetrics = future.get();
                 for (Map.Entry<String, MetricFamilySamples> entry : kafkaMetrics.entrySet()) {
                     if (!samples.containsKey(entry.getKey())) {
                         samples.put(entry.getKey(), entry.getValue());

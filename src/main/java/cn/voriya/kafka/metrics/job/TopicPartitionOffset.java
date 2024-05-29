@@ -15,28 +15,27 @@ import scala.collection.immutable.ListSet;
 import scala.collection.immutable.Map;
 
 import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * 请求信息按照leader分组，减少请求次数，一个leader请求一次
+ */
+class RequestInfoMap extends java.util.HashMap<BrokerEndPoint, HashMap<TopicAndPartition, PartitionOffsetRequestInfo>>{
+    public void putRequestInfo(BrokerEndPoint leader, TopicAndPartition topicAndPartition) {
+        if (!this.containsKey(leader)) {
+            this.put(leader, new HashMap<>());
+        }
+        HashMap<TopicAndPartition, PartitionOffsetRequestInfo> requestInfo = this.get(leader);
+        requestInfo = requestInfo.$plus(new Tuple2<>(topicAndPartition, new PartitionOffsetRequestInfo(OffsetRequest.LatestTime(), 1)));
+        this.put(leader, requestInfo);
+    }
+}
 
 public class TopicPartitionOffset {
     private static final String CLIENT_ID = "GetOffsetJavaAPI";
-    //消费者缓存
-    private static final ConcurrentHashMap<BrokerEndPoint, SimpleConsumer> CONSUMER_CACHE = new ConcurrentHashMap<>();
-    //请求信息按照leader分组，减少请求次数，一个leader请求一次
-    private static final java.util.HashMap<BrokerEndPoint, HashMap<TopicAndPartition, PartitionOffsetRequestInfo>> REQUEST_INFO_MAP = new java.util.HashMap<>();
-
-    private static void putRequestInfo(BrokerEndPoint leader, TopicAndPartition topicAndPartition) {
-        if (!REQUEST_INFO_MAP.containsKey(leader)) {
-            REQUEST_INFO_MAP.put(leader, new HashMap<>());
-        }
-        HashMap<TopicAndPartition, PartitionOffsetRequestInfo> requestInfo = REQUEST_INFO_MAP.get(leader);
-        requestInfo = requestInfo.$plus(new Tuple2<>(topicAndPartition, new PartitionOffsetRequestInfo(OffsetRequest.LatestTime(), 1)));
-        REQUEST_INFO_MAP.put(leader, requestInfo);
-    }
 
     @SneakyThrows
     public static ArrayList<TopicPartitionOffsetMetric> get(String brokerList) {
-        CONSUMER_CACHE.clear();
-        REQUEST_INFO_MAP.clear();
+        RequestInfoMap requestInfoMap = new RequestInfoMap();
         //解析brokerList
         Seq<BrokerEndPoint> brokerEndPointSeq = ClientUtils.parseBrokerList(brokerList);
         //查询的topic，为空则查询所有topic
@@ -67,15 +66,15 @@ public class TopicPartitionOffset {
                 }
                 BrokerEndPoint leader = partitionMetadata.leader().get();
                 //构建请求信息
-                putRequestInfo(leader, new TopicAndPartition(topic, partitionId));
+                requestInfoMap.putRequestInfo(leader, new TopicAndPartition(topic, partitionId));
             }
         }
         //遍历每个leader的请求信息，开始请求offset
-        for (BrokerEndPoint leader : REQUEST_INFO_MAP.keySet()) {
+        for (BrokerEndPoint leader : requestInfoMap.keySet()) {
             //获取leader的SimpleConsumer
-            SimpleConsumer consumer = getSimpleConsumer(leader);
+            SimpleConsumer consumer = new SimpleConsumer(leader.host(), leader.port(), 10000, 100000, CLIENT_ID);
             //构建leader的请求信息
-            OffsetRequest offsetRequest = new OffsetRequest(REQUEST_INFO_MAP.get(leader), 0, 0);
+            OffsetRequest offsetRequest = new OffsetRequest(requestInfoMap.get(leader), 0, 0);
             //发送请求
             Map<TopicAndPartition, PartitionOffsetsResponse> responseMap = consumer.getOffsetsBefore(offsetRequest).partitionErrorAndOffsets();
             //遍历响应，构建metric
@@ -90,12 +89,5 @@ public class TopicPartitionOffset {
             }
         }
         return metrics;
-    }
-
-    private static SimpleConsumer getSimpleConsumer(BrokerEndPoint leader) {
-        if (!CONSUMER_CACHE.containsKey(leader)) {
-            CONSUMER_CACHE.put(leader, new SimpleConsumer(leader.host(), leader.port(), 10000, 100000, CLIENT_ID));
-        }
-        return CONSUMER_CACHE.get(leader);
     }
 }
