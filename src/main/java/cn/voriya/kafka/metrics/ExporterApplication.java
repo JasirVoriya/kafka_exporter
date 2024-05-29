@@ -3,6 +3,7 @@ package cn.voriya.kafka.metrics;
 import cn.voriya.kafka.metrics.collectors.KafkaCollector;
 import cn.voriya.kafka.metrics.config.Config;
 import cn.voriya.kafka.metrics.config.ConfigCluster;
+import cn.voriya.kafka.metrics.http.ExporterHttpServer;
 import io.prometheus.client.exporter.HTTPServer;
 import lombok.extern.log4j.Log4j2;
 
@@ -15,7 +16,7 @@ public class ExporterApplication {
         for (ConfigCluster configCluster : config.getCluster()) {
             log.info("cluster: {}", configCluster);
         }
-        try (HTTPServer ignored = new HTTPServer(port)) {
+        try (HTTPServer ignored = ExporterHttpServer.create(port)) {
             new KafkaCollector().register();
             log.info("server started on port {}", port);
             log.info("Kafka Exporter started");
