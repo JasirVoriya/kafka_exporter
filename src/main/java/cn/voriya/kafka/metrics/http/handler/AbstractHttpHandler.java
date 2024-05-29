@@ -25,26 +25,26 @@ public class AbstractHttpHandler implements HttpHandler {
                 put(exchange, parseQuery(exchange));
                 break;
             default:
-                exchange.getResponseBody().write((exchange.getRequestMethod() + " method are not allowed.").getBytes());
+                this.methodNotFollowed(exchange);
                 break;
         }
         exchange.close();
     }
 
     protected void get(HttpExchange exchange, Map<String, String> params) throws IOException {
-        exchange.getResponseBody().write("GET method are not allowed.".getBytes());
+        this.methodNotFollowed(exchange);
     }
 
     protected void post(HttpExchange exchange, Map<String, String> params) throws IOException {
-        exchange.getResponseBody().write("POST method are not allowed.".getBytes());
+        this.methodNotFollowed(exchange);
     }
 
     protected void delete(HttpExchange exchange, Map<String, String> params) throws IOException {
-        exchange.getResponseBody().write("DELETE method are not allowed.".getBytes());
+        this.methodNotFollowed(exchange);
     }
 
     protected void put(HttpExchange exchange, Map<String, String> params) throws IOException {
-        exchange.getResponseBody().write("PUT method are not allowed.".getBytes());
+        this.methodNotFollowed(exchange);
     }
 
     private Map<String, String> parseQuery(HttpExchange exchange) {
@@ -64,5 +64,9 @@ public class AbstractHttpHandler implements HttpHandler {
             }
         }
         return params;
+    }
+    private void methodNotFollowed(HttpExchange exchange) throws IOException {
+        exchange.sendResponseHeaders(200, 0);
+        exchange.getResponseBody().write((exchange.getRequestMethod() + " method are not allowed.").getBytes());
     }
 }
