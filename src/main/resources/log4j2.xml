@@ -1,47 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
     <Properties>
-        <Property name="LOG_PATTERN" value="[%t][%-5p] [%d{yyyy-MM-dd HH:mm:ss}{Asia/Shanghai}] %C.%M(%L) | %m%n"/>
-        <Property name="LOG_PATH" value="$${env:LOG_PATH:-./logs}"/>
+        <Property name="CONSOLE_LOG_PATTERN" value="[%t][%-5p] [%d{yyyy-MM-dd HH:mm:ss}{Asia/Shanghai}] %C.%M(%L) | %m%n"/>
+        <Property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS}{Asia/Shanghai} %-5p %C.%M(%L) | %m%n"/>
+        <Property name="LOG_PATH" value="$${env:LOG_FILE_PATH:-./logs}"/>
     </Properties>
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <PatternLayout pattern="${CONSOLE_LOG_PATTERN}"/>
         </Console>
-        <RollingFile name="FileInfo" fileName="${LOG_PATH}/info/info.log" filePattern="${LOG_PATH}/info/info.log.%d{yyyy-MM-dd}.%i.log">
-            <PatternLayout pattern="${LOG_PATTERN}"/>
+        <RollingFile name="File" fileName="${LOG_PATH}/app.log" filePattern="${LOG_PATH}/app.log.%d{yyyy-MM-dd}.%i.log">
+            <PatternLayout pattern="${FILE_LOG_PATTERN}"/>
             <Policies>
                 <TimeBasedTriggeringPolicy/>
                 <SizeBasedTriggeringPolicy size="20 MB"/>
             </Policies>
             <DefaultRolloverStrategy max="14"/>
-            <LevelRangeFilter minLevel="INFO" maxLevel="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
-        </RollingFile>
-        <RollingFile name="FileWarn" fileName="${LOG_PATH}/warn/warn.log" filePattern="${LOG_PATH}/warn/warn.log.%d{yyyy-MM-dd}.%i.log">
-            <PatternLayout pattern="${LOG_PATTERN}"/>
-            <Policies>
-                <TimeBasedTriggeringPolicy/>
-                <SizeBasedTriggeringPolicy size="20 MB"/>
-            </Policies>
-            <DefaultRolloverStrategy max="14"/>
-            <LevelRangeFilter minLevel="WARN" maxLevel="WARN" onMatch="ACCEPT" onMismatch="DENY"/>
-        </RollingFile>
-        <RollingFile name="FileError" fileName="${LOG_PATH}/error/error.log" filePattern="${LOG_PATH}/error/error.log.%d{yyyy-MM-dd}.%i.log">
-            <PatternLayout pattern="${LOG_PATTERN}"/>
-            <Policies>
-                <TimeBasedTriggeringPolicy/>
-                <SizeBasedTriggeringPolicy size="20 MB"/>
-            </Policies>
-            <DefaultRolloverStrategy max="14"/>
-            <LevelRangeFilter minLevel="ERROR" maxLevel="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
         </RollingFile>
     </Appenders>
     <Loggers>
         <Root level="debug">
             <AppenderRef ref="Console"/>
-            <AppenderRef ref="FileInfo"/>
-            <AppenderRef ref="FileWarn"/>
-            <AppenderRef ref="FileError"/>
+            <AppenderRef ref="File"/>
         </Root>
     </Loggers>
 </Configuration>
