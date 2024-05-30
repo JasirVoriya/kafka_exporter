@@ -3,6 +3,8 @@ package cn.voriya.kafka.metrics.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 
+import java.util.List;
+
 public class JacksonUtil {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -36,6 +38,13 @@ public class JacksonUtil {
     @SneakyThrows
     public static <T> T toObject(String json, Class<T> clazz) {
         return MAPPER.readValue(json, clazz);
+    }
+    /**
+     * 将json字符串转换成List
+     */
+    @SneakyThrows
+    public static <T> List<T> toList(String json, Class<T> clazz) {
+        return MAPPER.readValue(json, MAPPER.getTypeFactory().constructCollectionType(List.class, clazz));
     }
 
     /**
