@@ -96,13 +96,34 @@ You can add one or more kafka clusters to the `cluster` field, and the exporter 
 
 The exporter provides the following HTTP API to manage the exporter configuration:
 
-| Path      | Method | Query         | Body      | Description                    |
-|-----------|--------|---------------|-----------|--------------------------------|
-| `/config` | GET    |               |           | Get the exporter configuration |
-| `/config` | POST   |               | `cluster` | Add or update the cluster      |
-| `/config` | DELETE | `clusterName` |           | Remove cluster by name         |
+| Path      | Method | Query         | Body                        | Description                    |
+|-----------|--------|---------------|-----------------------------|--------------------------------|
+| `/config` | GET    |               |                             | Get the exporter configuration |
+| `/config` | POST   |               | `[cluster1, cluster2, ...]` | Add or update the cluster      |
+| `/config` | DELETE | `clusterName` |                             | Remove cluster by name         |
 
-The `cluster` field in the body is the same as the `cluster` field in the `conf.yaml` file.
+The `cluster` field in the body is the same as the `cluster` field in the `conf.yaml` file, but it is a JSON string:
+
+```json
+[
+  {
+    "name": "cluster1",
+    "brokers": [
+      "127.0.0.1:9092",
+      "127.0.0.2:9092"
+    ]
+  },
+  {
+    "name": "cluster2",
+    "brokers": [
+      "127.0.0.3:9092",
+      "127.0.0.4:9092"
+    ]
+  }
+]
+```
+
+The `clusterName` in the query is the name of the cluster you want to remove.
 
 ## Metrics
 
