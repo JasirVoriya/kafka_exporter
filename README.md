@@ -12,6 +12,7 @@
 _✨ For Prometheus ✨_
 
 </div>
+
 <p align="center">
   <a href="https://www.apache.org/licenses/LICENSE-2.0.html">
     <img src="https://img.shields.io/badge/license-Apache%202-4EB1BA.svg" alt="license">
@@ -24,6 +25,7 @@ _✨ For Prometheus ✨_
   </a>
   <br />
 </p>
+
 <p align="center">
 Based on the kafka-0.11.0.3 version of the monitoring index exporter, support prometheus monitoring.
 </p>
@@ -87,6 +89,20 @@ The `conf.yaml` file contains the following fields:
 | `port`            | Number | The exporter listen port                                                | 1234    | No       |
 
 You can add one or more kafka clusters to the `cluster` field, and the exporter will collect the metrics for each cluster.
+
+## HTTP API
+
+### Configuration
+
+The exporter provides the following HTTP API to manage the exporter configuration:
+
+| Path      | Method | Query         | Body      | Description                    |
+|-----------|--------|---------------|-----------|--------------------------------|
+| `/config` | GET    |               |           | Get the exporter configuration |
+| `/config` | POST   |               | `cluster` | Add or update the cluster      |
+| `/config` | DELETE | `clusterName` |           | Remove cluster by name         |
+
+The `cluster` field in the body is the same as the `cluster` field in the `conf.yaml` file.
 
 ## Metrics
 

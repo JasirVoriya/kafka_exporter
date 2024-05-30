@@ -1,10 +1,11 @@
 package cn.voriya.kafka.metrics.config;
 
+import cn.voriya.kafka.metrics.utils.JacksonUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.ObjectUtils;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
@@ -16,8 +17,29 @@ import java.util.List;
 @NoArgsConstructor
 @Log4j2
 public class Config {
-    @Getter
     private static Config instance;
+
+    public static synchronized Config getInstance() {
+        return instance;
+    }
+
+    public static synchronized void updateOrInsertCluster(ConfigCluster cluster) {
+        Config newInstance = JacksonUtil.deepCopy(instance, Config.class);
+        newInstance.getCluster().stream().filter(c -> c.getName().equals(cluster.getName())).findFirst().ifPresentOrElse(
+                c -> {
+                    newInstance.getCluster().remove(c);
+                    newInstance.getCluster().add(cluster);
+                },
+                () -> newInstance.getCluster().add(cluster)
+        );
+        instance = newInstance;
+    }
+
+    public static synchronized void removeCluster(String clusterName) {
+        Config newInstance = JacksonUtil.deepCopy(instance, Config.class);
+        newInstance.getCluster().removeIf(c -> c.getName().equals(clusterName));
+        instance = newInstance;
+    }
 
     public static String getDefaultConfigPath() {
         try {
