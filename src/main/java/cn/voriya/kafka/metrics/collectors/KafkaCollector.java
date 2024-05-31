@@ -81,10 +81,10 @@ public class KafkaCollector extends Collector {
         ArrayList<MetricFamilySamples.Sample> consumerTopicLagSamples = new ArrayList<>();
         //根据topic和partition所拼接的字符串，查找对应的TopicPartitionOffsetMetric
         Map<String, TopicPartitionOffsetMetric> topicPartitionOffsetMetricMap = new HashMap<>();
-        topicPartitionOffsetMetrics.forEach(metric -> topicPartitionOffsetMetricMap.put(metric.getTopic() + "-" + metric.getPartition(), metric));
+        topicPartitionOffsetMetrics.forEach(metric -> topicPartitionOffsetMetricMap.put(metric.getTopic() + DELIMITER + metric.getPartition(), metric));
         //根据topic和partition所拼接的字符串，查找对应的ConsumerTopicPartitionOffsetMetric
         Map<String, ConsumerTopicPartitionOffsetMetric> consumerTopicPartitionOffsetMetricMap = new HashMap<>();
-        consumerTopicPartitionOffsetMetrics.forEach(metric -> consumerTopicPartitionOffsetMetricMap.put(metric.getTopic() + "-" + metric.getPartition(), metric));
+        consumerTopicPartitionOffsetMetrics.forEach(metric -> consumerTopicPartitionOffsetMetricMap.put(metric.getTopic() + DELIMITER + metric.getPartition(), metric));
         //开始生成metric
         //一个嵌套Map，用来计算broker上某个topic的offset，key为topic，value为broker和对应的offset
         Map<String, Map<String, Long>> brokerOffsetMap = new HashMap<>();
@@ -93,7 +93,7 @@ public class KafkaCollector extends Collector {
         Map<String, Map<String, Long>> consumerBrokerLagMap = new HashMap<>();
         for (TopicPartitionOffsetMetric metric : topicPartitionOffsetMetrics) {
             //根据topic和partition所拼接的字符串，查找对应的ConsumerTopicPartitionOffsetMetric
-            ConsumerTopicPartitionOffsetMetric consumerTopicPartitionOffsetMetric = consumerTopicPartitionOffsetMetricMap.get(metric.getTopic() + "-" + metric.getPartition());
+            ConsumerTopicPartitionOffsetMetric consumerTopicPartitionOffsetMetric = consumerTopicPartitionOffsetMetricMap.get(metric.getTopic() + DELIMITER + metric.getPartition());
             //如果找到了，将endOffset赋值给metric
             if (consumerTopicPartitionOffsetMetric != null) {
                 metric.setOffset(consumerTopicPartitionOffsetMetric.getLogEndOffset());
@@ -113,7 +113,7 @@ public class KafkaCollector extends Collector {
         }
         for (ConsumerTopicPartitionOffsetMetric metric : consumerTopicPartitionOffsetMetrics) {
             //根据topic和partition所拼接的字符串，查找对应的TopicPartitionOffsetMetric
-            TopicPartitionOffsetMetric topicPartitionOffsetMetric = topicPartitionOffsetMetricMap.get(metric.getTopic() + "-" + metric.getPartition());
+            TopicPartitionOffsetMetric topicPartitionOffsetMetric = topicPartitionOffsetMetricMap.get(metric.getTopic() + DELIMITER + metric.getPartition());
             //如果找到了，将leader赋值给metric
             if (topicPartitionOffsetMetric != null) {
                 metric.setLeader(topicPartitionOffsetMetric.getLeader());
