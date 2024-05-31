@@ -67,6 +67,10 @@ public class ConsumerTopicPartitionOffset {
             String consumerId = partitionAssignmentState.consumerId().getOrElse(MissColumnValues.STRING);
             String host = partitionAssignmentState.host().getOrElse(MissColumnValues.STRING);
             String clientId = partitionAssignmentState.clientId().getOrElse(MissColumnValues.STRING);
+            //如果没有clientId，说明是某个下线的消费者，数据无意义，直接跳过
+            if (partitionAssignmentState.clientId().isEmpty()) {
+                continue;
+            }
             ConsumerTopicPartitionOffsetMetric metric = new ConsumerTopicPartitionOffsetMetric(
                     group,
                     topic,
