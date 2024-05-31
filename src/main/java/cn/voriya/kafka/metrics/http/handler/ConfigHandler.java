@@ -7,6 +7,7 @@ import cn.voriya.kafka.metrics.utils.JacksonUtil;
 import com.sun.net.httpserver.HttpExchange;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 public class ConfigHandler extends AbstractHttpHandler {
@@ -36,8 +37,10 @@ public class ConfigHandler extends AbstractHttpHandler {
     @Override
     public void post(HttpExchange exchange, Map<String, String> params) throws IOException {
         String body = new String(exchange.getRequestBody().readAllBytes());
-        ConfigCluster configCluster = JacksonUtil.toObject(body, ConfigCluster.class);
-        Config.updateOrInsertCluster(configCluster);
+        List<ConfigCluster> configClusters = JacksonUtil.toList(body, ConfigCluster.class);
+        for (ConfigCluster configCluster : configClusters) {
+            Config.updateOrInsertCluster(configCluster);
+        }
         exchange.sendResponseHeaders(200, 0);
         exchange.getResponseBody().write(JacksonUtil.toJson(Config.getInstance()).getBytes());
     }

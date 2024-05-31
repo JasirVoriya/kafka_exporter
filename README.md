@@ -17,7 +17,7 @@ _✨ For Prometheus ✨_
   <a href="https://www.apache.org/licenses/LICENSE-2.0.html">
     <img src="https://img.shields.io/badge/license-Apache%202-4EB1BA.svg" alt="license">
   </a>
-  <img src="https://img.shields.io/badge/Java-17+-blue" alt="Java">
+  <img src="https://img.shields.io/badge/JDK-21+-blue" alt="Java">
   <br />
   <img src="https://img.shields.io/badge/Kafka Exporter-unstable-black?style=social&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABABAMAAABYR2ztAAAAIVBMVEUAAAAAAAADAwMHBwceHh4UFBQNDQ0ZGRkoKCgvLy8iIiLWSdWYAAAAAXRSTlMAQObYZgAAAQVJREFUSMftlM0RgjAQhV+0ATYK6i1Xb+iMd0qgBEqgBEuwBOxU2QDKsjvojQPvkJ/ZL5sXkgWrFirK4MibYUdE3OR2nEpuKz1/q8CdNxNQgthZCXYVLjyoDQftaKuniHHWRnPh2GCUetR2/9HsMAXyUT4/3UHwtQT2AggSCGKeSAsFnxBIOuAggdh3AKTL7pDuCyABcMb0aQP7aM4AnAbc/wHwA5D2wDHTTe56gIIOUA/4YYV2e1sg713PXdZJAuncdZMAGkAukU9OAn40O849+0ornPwT93rphWF0mgAbauUrEOthlX8Zu7P5A6kZyKCJy75hhw1Mgr9RAUvX7A3csGqZegEdniCx30c3agAAAABJRU5ErkJggg==" alt="kafka_exporter">
   <a href="https://docs.github.com/en/developers/apps">
@@ -96,13 +96,34 @@ You can add one or more kafka clusters to the `cluster` field, and the exporter 
 
 The exporter provides the following HTTP API to manage the exporter configuration:
 
-| Path      | Method | Query         | Body      | Description                    |
-|-----------|--------|---------------|-----------|--------------------------------|
-| `/config` | GET    |               |           | Get the exporter configuration |
-| `/config` | POST   |               | `cluster` | Add or update the cluster      |
-| `/config` | DELETE | `clusterName` |           | Remove cluster by name         |
+| Path      | Method | Query         | Body                        | Description                    |
+|-----------|--------|---------------|-----------------------------|--------------------------------|
+| `/config` | GET    |               |                             | Get the exporter configuration |
+| `/config` | POST   |               | `[cluster1, cluster2, ...]` | Add or update the cluster      |
+| `/config` | DELETE | `clusterName` |                             | Remove cluster by name         |
 
-The `cluster` field in the body is the same as the `cluster` field in the `conf.yaml` file.
+The `cluster` field in the body is the same as the `cluster` field in the `conf.yaml` file, but it is a JSON string:
+
+```json
+[
+  {
+    "name": "cluster1",
+    "brokers": [
+      "127.0.0.1:9092",
+      "127.0.0.2:9092"
+    ]
+  },
+  {
+    "name": "cluster2",
+    "brokers": [
+      "127.0.0.3:9092",
+      "127.0.0.4:9092"
+    ]
+  }
+]
+```
+
+The `clusterName` in the query is the name of the cluster you want to remove.
 
 ## Metrics
 
