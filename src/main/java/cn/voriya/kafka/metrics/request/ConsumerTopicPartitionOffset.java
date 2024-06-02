@@ -67,10 +67,6 @@ public class ConsumerTopicPartitionOffset {
             String consumerId = partitionAssignmentState.consumerId().getOrElse(MissColumnValues.STRING);
             String host = partitionAssignmentState.host().getOrElse(MissColumnValues.STRING);
             String clientId = partitionAssignmentState.clientId().getOrElse(MissColumnValues.STRING);
-            //如果没有clientId，说明是某个下线的消费者，数据无意义，直接跳过
-            if (clientId.equals(MissColumnValues.STRING.VALUE)) {
-                continue;
-            }
             ConsumerTopicPartitionOffsetMetric metric = new ConsumerTopicPartitionOffsetMetric(
                     group,
                     topic,
@@ -83,7 +79,10 @@ public class ConsumerTopicPartitionOffset {
                     consumerId,
                     host,
                     clientId);
-            metrics.add(metric);
+            //过滤无用的消费者
+            if (filterConsumer(metrics, metric)) {
+                metrics.add(metric);
+            }
         }
         //返回消费者组的消费信息
         return metrics;
@@ -126,5 +125,27 @@ public class ConsumerTopicPartitionOffset {
     private static KafkaConsumerGroupService getKafkaConsumerGroupService(String[] args) {
         ConsumerGroupCommandOptions commandOptions = new ConsumerGroupCommandOptions(args);
         return new KafkaConsumerGroupService(commandOptions);
+    }
+
+    /**
+     * 过滤无用的消费者
+     *
+     * @param metrics 消费者组的消费信息
+     * @param metric  消费者的消费信息
+     * @return 被过滤返回false，否则返回true
+     */
+    private static boolean filterConsumer(ArrayList<ConsumerTopicPartitionOffsetMetric> metrics, ConsumerTopicPartitionOffsetMetric metric) {
+        //如果没有clientId，说明是某个下线的消费者，数据无意义，直接跳过
+        if (metric.getClientId().equals(MissColumnValues.STRING.VALUE)) {
+            return false;
+        }
+        //如果当前消费者停止消费（同一个partition下有两个消费者，一个消费者停止消费，另一个消费者的offset会变化，导致lag不准确和offset不准确），直接跳过
+        for (ConsumerTopicPartitionOffsetMetric m : metrics) {
+            //同一个topic，同一个partition，且如果当前消费者的offset小于之前消费者的offset，说明当前消费者停止消费，直接跳过
+            if (m.getTopic().equals(metric.getTopic()) && m.getPartition().equals(metric.getPartition()) && metric.getOffset() < m.getOffset()) {
+                return false;
+            }
+        }
+        return true;
     }
 }
