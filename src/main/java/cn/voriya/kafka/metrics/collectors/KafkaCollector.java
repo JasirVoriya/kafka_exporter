@@ -64,9 +64,9 @@ public class KafkaCollector extends Collector {
 
     private Map<String, MetricFamilySamples> getKafkaMetrics(ConfigCluster configCluster) {
         //查询所有topic的offset
-        ArrayList<TopicPartitionOffsetMetric> topicPartitionOffsetMetrics = TopicPartitionOffset.get(String.join(",", configCluster.getBrokers()));
+        ArrayList<TopicPartitionOffsetMetric> topicPartitionOffsetMetrics = TopicPartitionOffset.get(configCluster);
         //查询所有消费者组的offset和lag
-        ArrayList<ConsumerTopicPartitionOffsetMetric> consumerTopicPartitionOffsetMetrics = ConsumerTopicPartitionOffset.get(String.join(",", configCluster.getBrokers()));
+        ArrayList<ConsumerTopicPartitionOffsetMetric> consumerTopicPartitionOffsetMetrics = ConsumerTopicPartitionOffset.get(configCluster);
         //三个partition维度的metric
         ArrayList<MetricFamilySamples.Sample> partitionOffsetSamples = new ArrayList<>();
         ArrayList<MetricFamilySamples.Sample> consumerPartitionOffsetSamples = new ArrayList<>();

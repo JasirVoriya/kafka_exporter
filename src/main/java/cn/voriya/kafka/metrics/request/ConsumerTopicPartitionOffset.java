@@ -1,6 +1,7 @@
 package cn.voriya.kafka.metrics.request;
 
 import cn.voriya.kafka.metrics.column.MissColumnValues;
+import cn.voriya.kafka.metrics.config.ConfigCluster;
 import cn.voriya.kafka.metrics.entity.ConsumerTopicPartitionOffsetMetric;
 import cn.voriya.kafka.metrics.thread.ThreadPool;
 import lombok.extern.log4j.Log4j2;
@@ -20,17 +21,17 @@ import static kafka.admin.ConsumerGroupCommand.*;
 
 @Log4j2
 public class ConsumerTopicPartitionOffset {
-    public static ArrayList<ConsumerTopicPartitionOffsetMetric> get(String brokerList) {
+    public static ArrayList<ConsumerTopicPartitionOffsetMetric> get(ConfigCluster configCluster) {
         ArrayList<ConsumerTopicPartitionOffsetMetric> metrics = new ArrayList<>();
         ArrayList<Future<ArrayList<ConsumerTopicPartitionOffsetMetric>>> futures = new ArrayList<>();
         //获取所有消费者组
-        List<String> groups = listGroups(brokerList);
+        List<String> groups = listGroups(configCluster);
         Iterator<String> groupIterator = groups.iterator();
         //遍历消费者组
         while (groupIterator.hasNext()) {
             String group = groupIterator.next();
             //多线程，每个消费者组一个线程，获取消费者组的消费信息
-            Future<ArrayList<ConsumerTopicPartitionOffsetMetric>> future = ThreadPool.CONSUMER_METRICS_POOL.submit(() -> getGroupMetric(brokerList, group));
+            Future<ArrayList<ConsumerTopicPartitionOffsetMetric>> future = ThreadPool.CONSUMER_METRICS_POOL.submit(() -> getGroupMetric(configCluster, group));
             //添加到future列表
             futures.add(future);
         }
@@ -48,10 +49,10 @@ public class ConsumerTopicPartitionOffset {
         return metrics;
     }
 
-    private static ArrayList<ConsumerTopicPartitionOffsetMetric> getGroupMetric(String brokerList, String group) {
+    private static ArrayList<ConsumerTopicPartitionOffsetMetric> getGroupMetric(ConfigCluster configCluster, String group) {
         ArrayList<ConsumerTopicPartitionOffsetMetric> metrics = new ArrayList<>();
         //请求消费者组信息
-        Tuple2<Option<String>, Option<Seq<PartitionAssignmentState>>> groupInfo = getGroupInfo(brokerList, group);
+        Tuple2<Option<String>, Option<Seq<PartitionAssignmentState>>> groupInfo = getGroupInfo(configCluster, group);
         if (groupInfo._2().isEmpty()) {
             return metrics;
         }
@@ -96,7 +97,8 @@ public class ConsumerTopicPartitionOffset {
         return metrics;
     }
 
-    private static List<String> listGroups(String brokerList) {
+    private static List<String> listGroups(ConfigCluster configCluster) {
+        String brokerList = String.join(",", configCluster.getBrokers());
         String[] args = {"--bootstrap-server", brokerList};
         List<String> groups = List$.MODULE$.empty();
         KafkaConsumerGroupService consumerGroupService = null;
@@ -104,7 +106,7 @@ public class ConsumerTopicPartitionOffset {
             consumerGroupService = getKafkaConsumerGroupService(args);
             groups = consumerGroupService.listGroups();
         } catch (Exception e) {
-            log.error("Failed to list groups", e);
+            log.error("Failed to list groups, cluster: {}", configCluster.getName(), e);
         } finally {
             if (consumerGroupService != null) {
                 consumerGroupService.close();
@@ -113,7 +115,8 @@ public class ConsumerTopicPartitionOffset {
         return groups;
     }
 
-    private static Tuple2<Option<String>, Option<Seq<PartitionAssignmentState>>> getGroupInfo(String brokerList, String group) {
+    private static Tuple2<Option<String>, Option<Seq<PartitionAssignmentState>>> getGroupInfo(ConfigCluster configCluster, String group) {
+        String brokerList = String.join(",", configCluster.getBrokers());
         String[] args = {"--bootstrap-server", brokerList, "--group", group, "--describe"};
         KafkaConsumerGroupService consumerGroupService = null;
         Tuple2<Option<String>, Option<Seq<PartitionAssignmentState>>> describedGroup = new Tuple2<>(Option.empty(), Option.empty());
@@ -121,7 +124,7 @@ public class ConsumerTopicPartitionOffset {
             consumerGroupService = getKafkaConsumerGroupService(args);
             describedGroup = consumerGroupService.describeGroup();
         }catch (Exception e) {
-            log.error("Failed to describe group, group: {}", group, e);
+            log.error("Failed to describe group, cluster: {}, group: {}", configCluster.getName(), group, e);
         } finally {
             if (consumerGroupService != null) {
                 consumerGroupService.close();

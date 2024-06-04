@@ -1,5 +1,6 @@
 package metrics;
 
+import cn.voriya.kafka.metrics.config.ConfigCluster;
 import cn.voriya.kafka.metrics.entity.ConsumerTopicPartitionOffsetMetric;
 import cn.voriya.kafka.metrics.entity.TopicPartitionOffsetMetric;
 import cn.voriya.kafka.metrics.request.ConsumerTopicPartitionOffset;
@@ -7,22 +8,27 @@ import cn.voriya.kafka.metrics.request.TopicPartitionOffset;
 import lombok.SneakyThrows;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class MetricsTest {
     private static final String brokerList = "10.178.75.211:9092,10.178.75.212:9092,10.178.75.213:9092";
+    private static final ConfigCluster configCluster = new ConfigCluster() {{
+        setBrokers(Arrays.asList(brokerList.split(",")));
+        setName("dev1");//
+    }};
 
     @SneakyThrows
     public static void main(String[] args) {
 //        统计执行时间
         long start = System.currentTimeMillis();
         {
-            ArrayList<TopicPartitionOffsetMetric> topicPartitionOffsetMetrics = TopicPartitionOffset.get(brokerList);
+            ArrayList<TopicPartitionOffsetMetric> topicPartitionOffsetMetrics = TopicPartitionOffset.get(configCluster);
             System.out.println(topicPartitionOffsetMetrics.size());
             long end = System.currentTimeMillis();
             System.out.println("Time: " + (end - start) + "ms");
         }
         {
-            ArrayList<ConsumerTopicPartitionOffsetMetric> consumerTopicPartitionOffsetMetrics = ConsumerTopicPartitionOffset.get(brokerList);
+            ArrayList<ConsumerTopicPartitionOffsetMetric> consumerTopicPartitionOffsetMetrics = ConsumerTopicPartitionOffset.get(configCluster);
             System.out.println(consumerTopicPartitionOffsetMetrics.size());
             long end = System.currentTimeMillis();
             System.out.println("Time: " + (end - start) + "ms");

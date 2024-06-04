@@ -1,5 +1,6 @@
 package cn.voriya.kafka.metrics.request;
 
+import cn.voriya.kafka.metrics.config.ConfigCluster;
 import cn.voriya.kafka.metrics.entity.TopicPartitionOffsetMetric;
 import kafka.api.*;
 import kafka.client.ClientUtils;
@@ -34,10 +35,10 @@ public class TopicPartitionOffset {
     private static final String CLIENT_ID = "GetOffsetJavaAPI";
 
     @SneakyThrows
-    public static ArrayList<TopicPartitionOffsetMetric> get(String brokerList) {
+    public static ArrayList<TopicPartitionOffsetMetric> get(ConfigCluster configCluster) {
         RequestInfoMap requestInfoMap = new RequestInfoMap();
         //解析brokerList
-        Seq<BrokerEndPoint> brokerEndPointSeq = ClientUtils.parseBrokerList(brokerList);
+        Seq<BrokerEndPoint> brokerEndPointSeq = ClientUtils.parseBrokerList(String.join(",", configCluster.getBrokers()));
         //查询的topic，为空则查询所有topic
         ListSet<String> topics = new ListSet<>();
         //获取topic元数据
