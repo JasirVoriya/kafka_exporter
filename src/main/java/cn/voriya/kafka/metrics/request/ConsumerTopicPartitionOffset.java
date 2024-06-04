@@ -88,10 +88,20 @@ public class ConsumerTopicPartitionOffset {
                 continue;
             }
             //同一个topic，同一个partition，且如果当前消费者的offset>=之前消费者的offset，说明之前的消费者停止消费，需要移除
-            metrics.removeIf(m -> m.getTopic().equals(metric.getTopic()) &&
-                    m.getPartition().equals(metric.getPartition()) &&
-                    m.getOffset() <= metric.getOffset());
-            metrics.add(metric);
+            boolean needAdd = true;
+            for (ConsumerTopicPartitionOffsetMetric m : metrics) {
+                if (m.getTopic().equals(metric.getTopic()) && m.getPartition().equals(metric.getPartition())) {
+                    if (metric.getOffset() > m.getOffset()) {
+                        metrics.remove(m);
+                    } else {
+                        needAdd = false;
+                    }
+                    break;
+                }
+            }
+            if (needAdd) {
+                metrics.add(metric);
+            }
         }
         //返回消费者组的消费信息
         return metrics;
