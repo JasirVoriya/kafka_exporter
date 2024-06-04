@@ -52,6 +52,9 @@ public class ConsumerTopicPartitionOffset {
         ArrayList<ConsumerTopicPartitionOffsetMetric> metrics = new ArrayList<>();
         //请求消费者组信息
         Tuple2<Option<String>, Option<Seq<PartitionAssignmentState>>> groupInfo = getGroupInfo(brokerList, group);
+        if (groupInfo._2().isEmpty()) {
+            return metrics;
+        }
         //获取消费者组每个partition的消费信息
         Seq<PartitionAssignmentState> partitionAssignmentStates = groupInfo._2().get();
         //遍历partition信息，生成metric
@@ -118,7 +121,7 @@ public class ConsumerTopicPartitionOffset {
             consumerGroupService = getKafkaConsumerGroupService(args);
             describedGroup = consumerGroupService.describeGroup();
         }catch (Exception e) {
-            log.error("Failed to describe group", e);
+            log.error("Failed to describe group, group: {}", group, e);
         } finally {
             if (consumerGroupService != null) {
                 consumerGroupService.close();
