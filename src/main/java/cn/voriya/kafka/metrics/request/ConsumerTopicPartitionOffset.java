@@ -91,7 +91,7 @@ public class ConsumerTopicPartitionOffset {
             boolean needAdd = true;
             for (ConsumerTopicPartitionOffsetMetric m : metrics) {
                 if (m.getTopic().equals(metric.getTopic()) && m.getPartition().equals(metric.getPartition())) {
-                    if (metric.getOffset() > m.getOffset()) {
+                    if (metric.getOffset() >= m.getOffset()) {
                         metrics.remove(m);
                     } else {
                         needAdd = false;
