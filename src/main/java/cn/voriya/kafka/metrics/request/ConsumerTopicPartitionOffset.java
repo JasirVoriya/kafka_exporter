@@ -52,6 +52,8 @@ public class ConsumerTopicPartitionOffset {
             String consumerId = partitionAssignmentState.consumerId().getOrElse(MissColumnValues.STRING);
             String host = partitionAssignmentState.host().getOrElse(MissColumnValues.STRING);
             String clientId = partitionAssignmentState.clientId().getOrElse(MissColumnValues.STRING);
+            log.debug("group: {}, topic: {}, partition: {}, offset: {}, logEndOffset: {}, lag: {}, consumerId: {}, host: {}, clientId: {}",
+                    group, topic, partition, offset, logEndOffset, lag, consumerId, host, clientId);
             var metric = new ConsumerTopicPartitionOffsetMetric(
                     group,
                     topic,
