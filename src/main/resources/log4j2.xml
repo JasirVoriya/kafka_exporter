@@ -2,7 +2,7 @@
 <Configuration status="WARN">
     <Properties>
         <Property name="CONSOLE_LOG_PATTERN" value="[%t][%-5p] [%d{yyyy-MM-dd HH:mm:ss}{Asia/Shanghai}] %C.%M(%L) | %m%n"/>
-        <Property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS}{Asia/Shanghai} %-5p %C.%M(%L) | %m%n"/>
+        <Property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS}{Asia/Shanghai} %-5p &lt;%C&gt;&lt;%M&gt;(%L) | %m%n"/>
         <Property name="LOG_PATH" value="$${env:LOG_FILE_PATH:-./logs}"/>
         <Property name="LOG_LEVEL" value="$${env:APP_LOG_LEVEL:-INFO}"/>
     </Properties>
