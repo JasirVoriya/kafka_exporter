@@ -1,6 +1,7 @@
 package cn.voriya.kafka.metrics;
 
 import cn.voriya.kafka.metrics.collectors.KafkaCollector;
+import cn.voriya.kafka.metrics.collectors.TestCollector;
 import cn.voriya.kafka.metrics.config.Config;
 import cn.voriya.kafka.metrics.config.ConfigCluster;
 import cn.voriya.kafka.metrics.http.ExporterHttpServer;
@@ -18,6 +19,7 @@ public class ExporterApplication {
         }
         try (HTTPServer ignored = ExporterHttpServer.create(port)) {
             new KafkaCollector().register();
+            new TestCollector().register();
             log.info("server started on port {}", port);
             log.info("Kafka Exporter started");
             Thread.currentThread().join();
