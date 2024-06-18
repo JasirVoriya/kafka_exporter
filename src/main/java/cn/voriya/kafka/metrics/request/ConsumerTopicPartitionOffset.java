@@ -66,25 +66,7 @@ public class ConsumerTopicPartitionOffset {
                     consumerId,
                     host,
                     clientId);
-            //如果没有clientId，说明是某个下线的消费者，数据无意义，直接跳过
-            if (metric.getClientId().equals(MissColumnValues.STRING.VALUE)) {
-                continue;
-            }
-            //同一个topic，同一个partition，且如果当前消费者的offset>=之前消费者的offset，说明之前的消费者停止消费，需要移除
-            boolean needAdd = true;
-            for (var m : metrics) {
-                if (m.getTopic().equals(metric.getTopic()) && m.getPartition().equals(metric.getPartition())) {
-                    if (m.getOffset() <= metric.getOffset()) {
-                        metrics.remove(m);
-                    } else {
-                        needAdd = false;
-                    }
-                    break;
-                }
-            }
-            if (needAdd) {
-                metrics.add(metric);
-            }
+            metrics.add(metric);
         }
         //返回消费者组的消费信息
         return metrics;
