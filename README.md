@@ -144,10 +144,10 @@ The exporter will expose the following metrics:
 
 ### Consumer Group Metrics
 
-| Name                                 | Exposed information                        |
-|--------------------------------------|--------------------------------------------|
-| `kafka_topic_consumer_group_ offset` | Every consumer group offset in a partition |
-| `kafka_topic_consumer_group_lag`     | Every consumer group lag in a partition    |
+| Name                                | Exposed information                        |
+|-------------------------------------|--------------------------------------------|
+| `kafka_topic_consumer_group_offset` | Every consumer group offset in a partition |
+| `kafka_topic_consumer_group_lag`    | Every consumer group lag in a partition    |
 
 ## Star ⭐
 [![Stargazers over time](https://starchart.cc/JasirVoriya/kafka_exporter.svg?variant=adaptive)](https://starchart.cc/JasirVoriya/kafka_exporter)
