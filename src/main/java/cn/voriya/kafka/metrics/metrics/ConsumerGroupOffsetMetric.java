@@ -11,7 +11,7 @@ import java.util.List;
 public class ConsumerGroupOffsetMetric extends Collector.MetricFamilySamples {
     public ConsumerGroupOffsetMetric() {
         super(
-                "kafka_topic_consumer_group_lag",
+                "kafka_topic_consumer_group_offset",
                 Collector.Type.GAUGE,
                 "help",
                 new LinkedList<>()
