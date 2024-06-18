@@ -129,30 +129,25 @@ The `clusterName` in the query is the name of the cluster you want to remove.
 
 The exporter will expose the following metrics:
 
-### Partition Metrics
+### Producer Metrics
 
-| Name                                    | Exposed information                          |
-|-----------------------------------------|----------------------------------------------|
-| `kafka_topic_partition_offset`          | a topic's partition offset sum               |
-| `kafka_consumer_topic_partition_offset` | a consumer's partition offset sum in a topic |
-| `kafka_consumer_topic_partition_lag`    | a consumer's partition lag sum in a topic    |
+| Name                          | Exposed information        |
+|-------------------------------|----------------------------|
+| `kafka_topic_producer_offset` | A partition produce offset |
 
-### Broker Metrics
+### Consumer Metrics
 
+| Name                          | Exposed information                  |
+|-------------------------------|--------------------------------------|
+| `kafka_topic_consumer_offset` | Every consumer offset in a partition |
+| `kafka_topic_consumer_lag`    | Every consumer lag in a partition    |  
 
-| Name                                 | Exposed information                            |
-|--------------------------------------|------------------------------------------------|
-| `kafka_topic_broker_offset`          | a topic's offset sum in a broker               |
-| `kafka_consumer_broker_topic_offset` | a consumer's offset sum in a topic in a broker |
-| `kafka_consumer_broker_topic_lag`    | a consumer's lag sum in a topic in a broker    |
-
-### Topic Metrics
+### Consumer Group Metrics
 
 | Name                                 | Exposed information                        |
 |--------------------------------------|--------------------------------------------|
-| `kafka_topic_offset`                 | a topic's offset sum                       |
-| `kafka_consumer_topic_offset`        | a consumer's offset sum in a topic         |
-| `kafka_consumer_topic_lag`           | a consumer's lag sum in a topic            |
+| `kafka_topic_consumer_group_ offset` | Every consumer group offset in a partition |
+| `kafka_topic_consumer_group_lag`     | Every consumer group lag in a partition    |
 
 ## Star ⭐
 [![Stargazers over time](https://starchart.cc/JasirVoriya/kafka_exporter.svg?variant=adaptive)](https://starchart.cc/JasirVoriya/kafka_exporter)
