@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class TopicConsumerOffsetMetric {
+public class TopicConsumerResponse {
     private String consumerGroup;
     private String topic;
     private Integer partition;

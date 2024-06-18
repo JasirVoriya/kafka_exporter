@@ -2,23 +2,24 @@ package cn.voriya.kafka.metrics.collectors;
 
 import cn.voriya.kafka.metrics.config.Config;
 import cn.voriya.kafka.metrics.config.ConfigCluster;
-import cn.voriya.kafka.metrics.entity.TopicConsumerOffsetMetric;
-import cn.voriya.kafka.metrics.entity.TopicProducerOffsetMetric;
+import cn.voriya.kafka.metrics.entity.TopicConsumerResponse;
+import cn.voriya.kafka.metrics.entity.TopicProducerResponse;
+import cn.voriya.kafka.metrics.metrics.*;
 import cn.voriya.kafka.metrics.request.TopicConsumerOffset;
-import cn.voriya.kafka.metrics.request.TopicPartitionOffset;
+import cn.voriya.kafka.metrics.request.TopicProducerOffset;
 import cn.voriya.kafka.metrics.thread.ThreadPool;
 import io.prometheus.client.Collector;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.time.StopWatch;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Future;
 
 @Log4j2
 public class KafkaCollector extends Collector {
-    public static final String kafkaTopicProducerOffset = "kafka_topic_producer_offset";
-    public static final String kafkaTopicConsumerOffset = "kafka_topic_consumer_offset";
-    public static final String kafkaTopicConsumerLag = "kafka_topic_consumer_lag";
     //分隔符
     private static final String DELIMITER = "@&@";
     @Override
@@ -58,62 +59,50 @@ public class KafkaCollector extends Collector {
 
     private Map<String, MetricFamilySamples> getKafkaMetrics(ConfigCluster configCluster) {
         //查询所有topic的offset
-        ArrayList<TopicProducerOffsetMetric> topicProducerOffsetMetrics = TopicPartitionOffset.get(configCluster);
+        ArrayList<TopicProducerResponse> topicProducerResponses = TopicProducerOffset.get(configCluster);
         //查询所有消费者组的offset和lag
-        ArrayList<TopicConsumerOffsetMetric> topicConsumerOffsetMetrics = TopicConsumerOffset.get(configCluster);
+        ArrayList<TopicConsumerResponse> topicConsumerResponses = TopicConsumerOffset.get(configCluster);
         //三个metric
-        ArrayList<MetricFamilySamples.Sample> producerOffsetSamples = new ArrayList<>();
-        ArrayList<MetricFamilySamples.Sample> consumerOffsetSamples = new ArrayList<>();
-        ArrayList<MetricFamilySamples.Sample> consumerLagSamples = new ArrayList<>();
+        ProducerOffsetMetric producerOffsetMetric = new ProducerOffsetMetric();
+        ConsumerOffsetMetric consumerOffsetMetric = new ConsumerOffsetMetric();
+        ConsumerLagMetric consumerLagMetric = new ConsumerLagMetric();
+        ConsumerGroupOffsetMetric consumerGroupOffsetMetric = new ConsumerGroupOffsetMetric();
+        ConsumerGroupLagMetric consumerGroupLagMetric = new ConsumerGroupLagMetric();
         //根据topic和partition所拼接的字符串，查找对应的TopicProducerOffsetMetric
-        Map<String, TopicProducerOffsetMetric> producerOffsetMetricMap = new HashMap<>();
-        topicProducerOffsetMetrics.forEach(metric -> producerOffsetMetricMap.put(metric.getTopic() + DELIMITER + metric.getPartition(), metric));
+        Map<String, TopicProducerResponse> producerOffsetMetricMap = new HashMap<>();
+        topicProducerResponses.forEach(metric -> producerOffsetMetricMap.put(metric.getTopic() + DELIMITER + metric.getPartition(), metric));
         //根据topic和partition所拼接的字符串，查找对应的ConsumerTopicPartitionOffsetMetric
-        Map<String, TopicConsumerOffsetMetric> consumerOffsetMetricMap = new HashMap<>();
-        topicConsumerOffsetMetrics.forEach(metric -> consumerOffsetMetricMap.put(metric.getTopic() + DELIMITER + metric.getPartition(), metric));
+        Map<String, TopicConsumerResponse> consumerOffsetMetricMap = new HashMap<>();
+        topicConsumerResponses.forEach(metric -> consumerOffsetMetricMap.put(metric.getTopic() + DELIMITER + metric.getPartition(), metric));
         //开始生成metric
-        for (TopicProducerOffsetMetric metric : topicProducerOffsetMetrics) {
+        for (TopicProducerResponse res : topicProducerResponses) {
             //根据topic和partition所拼接的字符串，查找对应的ConsumerTopicPartitionOffsetMetric
-            TopicConsumerOffsetMetric topicConsumerOffsetMetric = consumerOffsetMetricMap.get(metric.getTopic() + DELIMITER + metric.getPartition());
+            TopicConsumerResponse topicConsumerResponse = consumerOffsetMetricMap.get(res.getTopic() + DELIMITER + res.getPartition());
             //如果找到了，将endOffset赋值给metric
-            if (topicConsumerOffsetMetric != null) {
-                metric.setOffset(topicConsumerOffsetMetric.getLogEndOffset());
+            if (topicConsumerResponse != null) {
+                res.setOffset(topicConsumerResponse.getLogEndOffset());
             }
-            //kafka_topic_partition_offset
-            producerOffsetSamples.add(new MetricFamilySamples.Sample(
-                    kafkaTopicProducerOffset,
-                    List.of("cluster", "topic", "partition", "leader"),
-                    Arrays.asList(configCluster.getName(), metric.getTopic(), String.valueOf(metric.getPartition()), metric.getLeader()),
-                    metric.getOffset()
-            ));
+            producerOffsetMetric.add(res, configCluster);
         }
-        for (TopicConsumerOffsetMetric metric : topicConsumerOffsetMetrics) {
+        for (TopicConsumerResponse res : topicConsumerResponses) {
             //根据topic和partition所拼接的字符串，查找对应的TopicPartitionOffsetMetric
-            TopicProducerOffsetMetric topicProducerOffsetMetric = producerOffsetMetricMap.get(metric.getTopic() + DELIMITER + metric.getPartition());
+            TopicProducerResponse topicProducerResponse = producerOffsetMetricMap.get(res.getTopic() + DELIMITER + res.getPartition());
             //如果找到了，将leader赋值给metric
-            if (topicProducerOffsetMetric != null) {
-                metric.setLeader(topicProducerOffsetMetric.getLeader());
+            if (topicProducerResponse != null) {
+                res.setLeader(topicProducerResponse.getLeader());
             }
-            consumerOffsetSamples.add(new MetricFamilySamples.Sample(
-                    kafkaTopicConsumerOffset,
-                    List.of("cluster", "consumer_group", "topic", "partition", "leader", "coordinator", "consumer_id", "host", "client_id"),
-                    Arrays.asList(configCluster.getName(), metric.getConsumerGroup(), metric.getTopic(), String.valueOf(metric.getPartition()), metric.getLeader(), metric.getCoordinator(), metric.getConsumerId(), metric.getHost(), metric.getClientId()),
-                    metric.getOffset()
-            ));
-            consumerLagSamples.add(new MetricFamilySamples.Sample(
-                    kafkaTopicConsumerLag,
-                    List.of("cluster", "consumer_group", "topic", "partition", "leader", "coordinator", "consumer_id", "host", "client_id"),
-                    Arrays.asList(configCluster.getName(), metric.getConsumerGroup(), metric.getTopic(), String.valueOf(metric.getPartition()), metric.getLeader(), metric.getCoordinator(), metric.getConsumerId(), metric.getHost(), metric.getClientId()),
-                    metric.getLag()
-            ));
+            consumerOffsetMetric.add(res, configCluster);
+            consumerLagMetric.add(res, configCluster);
+            consumerGroupLagMetric.add(res, configCluster);
+            consumerGroupOffsetMetric.add(res, configCluster);
         }
         //offset
         //consumer_offset
         //consumer_lag
         Map<String, MetricFamilySamples> map = new HashMap<>();
-        map.put(kafkaTopicProducerOffset, new MetricFamilySamples(kafkaTopicProducerOffset, Type.GAUGE, "help", producerOffsetSamples));
-        map.put(kafkaTopicConsumerOffset, new MetricFamilySamples(kafkaTopicConsumerOffset, Type.GAUGE, "help", consumerOffsetSamples));
-        map.put(kafkaTopicConsumerLag, new MetricFamilySamples(kafkaTopicConsumerLag, Type.GAUGE, "help", consumerLagSamples));
+        map.put(producerOffsetMetric.name, producerOffsetMetric);
+        map.put(consumerOffsetMetric.name, consumerOffsetMetric);
+        map.put(consumerLagMetric.name, consumerLagMetric);
         return map;
     }
 }
