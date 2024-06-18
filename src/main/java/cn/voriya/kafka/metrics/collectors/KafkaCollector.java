@@ -103,6 +103,8 @@ public class KafkaCollector extends Collector {
         map.put(producerOffsetMetric.name, producerOffsetMetric);
         map.put(consumerOffsetMetric.name, consumerOffsetMetric);
         map.put(consumerLagMetric.name, consumerLagMetric);
+        map.put(consumerGroupOffsetMetric.name, consumerGroupOffsetMetric);
+        map.put(consumerGroupLagMetric.name, consumerGroupLagMetric);
         return map;
     }
 }
