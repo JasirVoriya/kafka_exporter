@@ -94,6 +94,7 @@ public class KafkaCollector extends Collector {
         }
         ExporterTotalTimeMetric exporterTotalTimeMetric = new ExporterTotalTimeMetric();
         exporterTotalTimeMetric.add(totalStopWatch.getTime());
+        samples.put(exporterTotalTimeMetric.name, exporterTotalTimeMetric);
         return samples;
     }
 
