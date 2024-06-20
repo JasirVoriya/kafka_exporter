@@ -24,6 +24,11 @@ public class KafkaCollector extends Collector {
     private static final String DELIMITER = "@&@";
     @Override
     public List<MetricFamilySamples> collect() {
+        Map<String, MetricFamilySamples> samples = getAllClusterMetrics();
+        return new ArrayList<>(samples.values());
+    }
+
+    private Map<String, MetricFamilySamples> getAllClusterMetrics() {
         Map<String, MetricFamilySamples> samples = new HashMap<>();
         StopWatch totalStopWatch = StopWatch.createStarted();
         try{
@@ -34,7 +39,7 @@ public class KafkaCollector extends Collector {
                 futures.add(ThreadPool.CLUSTER_POOL.submit(() -> {
                     log.info("Start to collect kafka metrics, cluster: [{}]", configCluster.getName());
                     StopWatch clusterStopWatch = StopWatch.createStarted();
-                    Map<String, MetricFamilySamples> kafkaMetrics = getKafkaMetrics(configCluster);
+                    Map<String, MetricFamilySamples> kafkaMetrics = getClusterMetrics(configCluster);
                     log.info("Finish to collect kafka metrics, cluster: [{}], time: {}ms", configCluster.getName(), clusterStopWatch.getTime());
                     return kafkaMetrics;
                 }));
@@ -54,10 +59,10 @@ public class KafkaCollector extends Collector {
             log.error("Failed to collect kafka metrics, total time: {}ms", totalStopWatch.getTime(), e);
         }
         log.info("Finish to collect all kafka metrics, total time: {}ms", totalStopWatch.getTime());
-        return new ArrayList<>(samples.values());
+        return samples;
     }
 
-    private Map<String, MetricFamilySamples> getKafkaMetrics(ConfigCluster configCluster) {
+    private Map<String, MetricFamilySamples> getClusterMetrics(ConfigCluster configCluster) {
         //查询所有topic的offset
         ArrayList<TopicProducerResponse> topicProducerResponses = TopicProducerOffset.get(configCluster);
         //查询所有消费者组的offset和lag
