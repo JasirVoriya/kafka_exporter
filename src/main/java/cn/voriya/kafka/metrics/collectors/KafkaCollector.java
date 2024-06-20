@@ -16,16 +16,48 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Log4j2
 public class KafkaCollector extends Collector {
     //分隔符
     private static final String DELIMITER = "@&@";
+    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private Map<String, MetricFamilySamples> samples = new HashMap<>();
+    private final Object lock = new Object();
+
+    public KafkaCollector() {
+        this.updateSamples();
+        scheduler.scheduleAtFixedRate(this::updateSamples, 0, Config.getInstance().getInterval(), TimeUnit.SECONDS);
+    }
+
+    private void updateSamples() {
+        synchronized (lock) {
+            this.samples.clear();
+            lock.notifyAll();
+        }
+        Map<String, MetricFamilySamples> samples = getAllClusterMetrics();
+        synchronized (lock) {
+            this.samples = samples;
+            lock.notifyAll();
+        }
+    }
+
     @Override
     public List<MetricFamilySamples> collect() {
-        Map<String, MetricFamilySamples> samples = getAllClusterMetrics();
-        return new ArrayList<>(samples.values());
+        synchronized (lock) {
+            while (samples.isEmpty()) {
+                try {
+                    lock.wait(500);
+                } catch (InterruptedException e) {
+                    log.error("Interrupted while waiting for samples", e);
+                }
+            }
+            return new ArrayList<>(samples.values());
+        }
     }
 
     private Map<String, MetricFamilySamples> getAllClusterMetrics() {
