@@ -2,8 +2,8 @@ package cn.voriya.kafka.metrics.collectors;
 
 import cn.voriya.kafka.metrics.config.Config;
 import cn.voriya.kafka.metrics.config.ConfigCluster;
-import cn.voriya.kafka.metrics.entity.TopicConsumeEntity;
-import cn.voriya.kafka.metrics.entity.TopicProduceEntity;
+import cn.voriya.kafka.metrics.entity.TopicConsumerEntity;
+import cn.voriya.kafka.metrics.entity.TopicProducerEntity;
 import cn.voriya.kafka.metrics.metrics.*;
 import cn.voriya.kafka.metrics.request.TopicConsumerOffset;
 import cn.voriya.kafka.metrics.request.TopicProducerOffset;
@@ -96,9 +96,9 @@ public class KafkaCollector extends Collector {
 
     private Map<String, MetricFamilySamples> getClusterMetrics(ConfigCluster configCluster) {
         //查询所有topic的offset
-        ArrayList<TopicProduceEntity> topicProducerRespons = TopicProducerOffset.get(configCluster);
+        ArrayList<TopicProducerEntity> topicProducerRespons = TopicProducerOffset.get(configCluster);
         //查询所有消费者组的offset和lag
-        ArrayList<TopicConsumeEntity> topicConsumerRespons = TopicConsumerOffset.get(configCluster);
+        ArrayList<TopicConsumerEntity> topicConsumerRespons = TopicConsumerOffset.get(configCluster);
         //三个metric
         ProducerOffsetMetric producerOffsetMetric = new ProducerOffsetMetric();
         ConsumerOffsetMetric consumerOffsetMetric = new ConsumerOffsetMetric();
@@ -106,27 +106,27 @@ public class KafkaCollector extends Collector {
         ConsumerGroupOffsetMetric consumerGroupOffsetMetric = new ConsumerGroupOffsetMetric();
         ConsumerGroupLagMetric consumerGroupLagMetric = new ConsumerGroupLagMetric();
         //根据topic和partition所拼接的字符串，查找对应的TopicProducerOffsetMetric
-        Map<String, TopicProduceEntity> producerOffsetMetricMap = new HashMap<>();
+        Map<String, TopicProducerEntity> producerOffsetMetricMap = new HashMap<>();
         topicProducerRespons.forEach(metric -> producerOffsetMetricMap.put(metric.getTopic() + DELIMITER + metric.getPartition(), metric));
         //根据topic和partition所拼接的字符串，查找对应的ConsumerTopicPartitionOffsetMetric
-        Map<String, TopicConsumeEntity> consumerOffsetMetricMap = new HashMap<>();
+        Map<String, TopicConsumerEntity> consumerOffsetMetricMap = new HashMap<>();
         topicConsumerRespons.forEach(metric -> consumerOffsetMetricMap.put(metric.getTopic() + DELIMITER + metric.getPartition(), metric));
         //开始生成metric
-        for (TopicProduceEntity res : topicProducerRespons) {
+        for (TopicProducerEntity res : topicProducerRespons) {
             //根据topic和partition所拼接的字符串，查找对应的ConsumerTopicPartitionOffsetMetric
-            TopicConsumeEntity topicConsumeEntity = consumerOffsetMetricMap.get(res.getTopic() + DELIMITER + res.getPartition());
+            TopicConsumerEntity topicConsumerEntity = consumerOffsetMetricMap.get(res.getTopic() + DELIMITER + res.getPartition());
             //如果找到了，将endOffset赋值给metric
-            if (topicConsumeEntity != null) {
-                res.setOffset(topicConsumeEntity.getLogEndOffset());
+            if (topicConsumerEntity != null) {
+                res.setOffset(topicConsumerEntity.getLogEndOffset());
             }
             producerOffsetMetric.add(res, configCluster);
         }
-        for (TopicConsumeEntity res : topicConsumerRespons) {
+        for (TopicConsumerEntity res : topicConsumerRespons) {
             //根据topic和partition所拼接的字符串，查找对应的TopicPartitionOffsetMetric
-            TopicProduceEntity topicProduceEntity = producerOffsetMetricMap.get(res.getTopic() + DELIMITER + res.getPartition());
+            TopicProducerEntity topicProducerEntity = producerOffsetMetricMap.get(res.getTopic() + DELIMITER + res.getPartition());
             //如果找到了，将leader赋值给metric
-            if (topicProduceEntity != null) {
-                res.setLeader(topicProduceEntity.getLeader());
+            if (topicProducerEntity != null) {
+                res.setLeader(topicProducerEntity.getLeader());
             }
             consumerOffsetMetric.add(res, configCluster);
             consumerLagMetric.add(res, configCluster);

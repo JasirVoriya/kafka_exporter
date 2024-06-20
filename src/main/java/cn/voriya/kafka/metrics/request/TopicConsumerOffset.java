@@ -2,7 +2,7 @@ package cn.voriya.kafka.metrics.request;
 
 import cn.voriya.kafka.metrics.column.MissColumnValues;
 import cn.voriya.kafka.metrics.config.ConfigCluster;
-import cn.voriya.kafka.metrics.entity.TopicConsumeEntity;
+import cn.voriya.kafka.metrics.entity.TopicConsumerEntity;
 import cn.voriya.kafka.metrics.thread.ThreadPool;
 import lombok.extern.log4j.Log4j2;
 import org.apache.kafka.common.Node;
@@ -17,9 +17,9 @@ import static kafka.admin.ConsumerGroupCommand.*;
 
 @Log4j2
 public class TopicConsumerOffset {
-    public static ArrayList<TopicConsumeEntity> get(ConfigCluster configCluster) {
-        ArrayList<TopicConsumeEntity> metrics = new ArrayList<>();
-        ArrayList<Future<ArrayList<TopicConsumeEntity>>> futures = new ArrayList<>();
+    public static ArrayList<TopicConsumerEntity> get(ConfigCluster configCluster) {
+        ArrayList<TopicConsumerEntity> metrics = new ArrayList<>();
+        ArrayList<Future<ArrayList<TopicConsumerEntity>>> futures = new ArrayList<>();
         //获取所有消费者组
         List<String> groups = listGroups(configCluster);
         for (String group : groups) {
@@ -38,8 +38,8 @@ public class TopicConsumerOffset {
         return metrics;
     }
 
-    private static ArrayList<TopicConsumeEntity> getGroupMetric(ConfigCluster configCluster, String group) {
-        ArrayList<TopicConsumeEntity> metrics = new ArrayList<>();
+    private static ArrayList<TopicConsumerEntity> getGroupMetric(ConfigCluster configCluster, String group) {
+        ArrayList<TopicConsumerEntity> metrics = new ArrayList<>();
         //请求消费者组信息
         var partitionAssignmentStateList = getGroupDescribe(configCluster, group);
         for (var partitionAssignmentState : partitionAssignmentStateList) {
@@ -54,7 +54,7 @@ public class TopicConsumerOffset {
             String clientId = partitionAssignmentState.clientId().getOrElse(MissColumnValues.STRING);
             log.info("group: {}, topic: {}, partition: {}, offset: {}, logEndOffset: {}, lag: {}, consumerId: {}, host: {}, clientId: {}",
                     group, topic, partition, offset, logEndOffset, lag, consumerId, host, clientId);
-            var metric = new TopicConsumeEntity(
+            var metric = new TopicConsumerEntity(
                     group,
                     topic,
                     partition,
