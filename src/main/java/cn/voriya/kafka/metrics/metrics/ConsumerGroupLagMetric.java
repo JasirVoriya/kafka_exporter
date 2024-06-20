@@ -1,7 +1,7 @@
 package cn.voriya.kafka.metrics.metrics;
 
 import cn.voriya.kafka.metrics.config.ConfigCluster;
-import cn.voriya.kafka.metrics.entity.TopicConsumerResponse;
+import cn.voriya.kafka.metrics.entity.TopicConsumeEntity;
 import io.prometheus.client.Collector;
 
 import java.util.Arrays;
@@ -18,7 +18,7 @@ public class ConsumerGroupLagMetric extends Collector.MetricFamilySamples {
         );
     }
 
-    public void add(TopicConsumerResponse res, ConfigCluster configCluster) {
+    public void add(TopicConsumeEntity res, ConfigCluster configCluster) {
         this.samples.add(new Sample(
                 this.name,
                 List.of("cluster", "consumer_group", "topic", "partition", "leader", "coordinator"),

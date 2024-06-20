@@ -1,7 +1,7 @@
 package cn.voriya.kafka.metrics.request;
 
 import cn.voriya.kafka.metrics.config.ConfigCluster;
-import cn.voriya.kafka.metrics.entity.TopicProducerResponse;
+import cn.voriya.kafka.metrics.entity.TopicProduceEntity;
 import kafka.api.*;
 import kafka.client.ClientUtils;
 import kafka.cluster.BrokerEndPoint;
@@ -34,7 +34,7 @@ public class TopicProducerOffset {
     private static final String CLIENT_ID = "GetOffsetJavaAPI";
 
     @SneakyThrows
-    public static ArrayList<TopicProducerResponse> get(ConfigCluster configCluster) {
+    public static ArrayList<TopicProduceEntity> get(ConfigCluster configCluster) {
         RequestInfoMap requestInfoMap = new RequestInfoMap();
         //获取topic元数据
         List<TopicMetadata> topicMetadataList;
@@ -49,7 +49,7 @@ public class TopicProducerOffset {
             log.error("Failed to get topic metadata, cluster:{}", configCluster.getName(), e);
             return new ArrayList<>();
         }
-        ArrayList<TopicProducerResponse> metrics = new ArrayList<>();
+        ArrayList<TopicProduceEntity> metrics = new ArrayList<>();
         //遍历topic元数据
         for (TopicMetadata topicMetadata : topicMetadataList) {
             //遍历partition元数据
@@ -59,7 +59,7 @@ public class TopicProducerOffset {
                 String topic = topicMetadata.topic();
                 //如果没有leader，说明该partition不可用，直接跳过
                 if (partitionMetadata.leader().isEmpty()) {
-                    metrics.add(new TopicProducerResponse(topic, partitionId, 0L, "No Leader"));
+                    metrics.add(new TopicProduceEntity(topic, partitionId, 0L, "No Leader"));
                     continue;
                 }
                 BrokerEndPoint leader = partitionMetadata.leader().get();
@@ -78,7 +78,7 @@ public class TopicProducerOffset {
             responseMap.forEach((topicAndPartition, partitionOffsetsResponse) -> {
                 Seq<Object> offsets = partitionOffsetsResponse.offsets();
                 Long offset = (Long) offsets.apply(0);
-                metrics.add(new TopicProducerResponse(topicAndPartition.topic(), topicAndPartition.partition(), offset, String.format("%s:%d", leader.host(), leader.port())));
+                metrics.add(new TopicProduceEntity(topicAndPartition.topic(), topicAndPartition.partition(), offset, String.format("%s:%d", leader.host(), leader.port())));
             });
         }
         return metrics;

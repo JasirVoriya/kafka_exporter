@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class TopicConsumerResponse {
+public class TopicConsumeEntity {
     private String consumerGroup;
     private String topic;
     private Integer partition;
