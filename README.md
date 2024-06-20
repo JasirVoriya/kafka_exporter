@@ -86,7 +86,8 @@ The `conf.yaml` file contains the following fields:
 | `cluster`         | Array  | The kafka cluster information, each cluster contains a name and brokers |         | Yes      |
 | `cluster.name`    | String | The cluster name                                                        |         | Yes      |
 | `cluster.brokers` | Array  | The kafka brokers information, each broker contains a host and port     |         | Yes      |
-| `port`            | Number | The exporter listen port                                                | 1234    | No       |
+| `port`            | Number | The exporter listen port                                                | 4399    | No       |
+| `interval`        | Number | The interval to collect the metrics, in seconds                         | 15      | No       |
 
 You can add one or more kafka clusters to the `cluster` field, and the exporter will collect the metrics for each cluster.
 
