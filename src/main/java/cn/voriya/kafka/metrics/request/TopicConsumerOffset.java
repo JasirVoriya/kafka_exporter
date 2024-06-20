@@ -3,12 +3,14 @@ package cn.voriya.kafka.metrics.request;
 import cn.voriya.kafka.metrics.column.MissColumnValues;
 import cn.voriya.kafka.metrics.config.ConfigCluster;
 import cn.voriya.kafka.metrics.entity.TopicConsumerEntity;
+import cn.voriya.kafka.metrics.entity.TopicGroupEntity;
 import cn.voriya.kafka.metrics.thread.ThreadPool;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.time.StopWatch;
 import org.apache.kafka.common.Node;
 import scala.collection.JavaConverters;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -17,9 +19,9 @@ import static kafka.admin.ConsumerGroupCommand.*;
 
 @Log4j2
 public class TopicConsumerOffset {
-    public static ArrayList<TopicConsumerEntity> get(ConfigCluster configCluster) {
-        ArrayList<TopicConsumerEntity> metrics = new ArrayList<>();
-        ArrayList<Future<ArrayList<TopicConsumerEntity>>> futures = new ArrayList<>();
+    public static List<TopicGroupEntity> get(ConfigCluster configCluster) {
+        List<TopicGroupEntity> metrics = new LinkedList<>();
+        List<Future<TopicGroupEntity>> futures = new LinkedList<>();
         //获取所有消费者组
         List<String> groups = listGroups(configCluster);
         for (String group : groups) {
@@ -29,7 +31,7 @@ public class TopicConsumerOffset {
         //获取所有消费者组的消费信息，合并到一个列表
         for (var future : futures) {
             try {
-                metrics.addAll(future.get());
+                metrics.add(future.get());
             } catch (InterruptedException | ExecutionException e) {
                 log.error("Failed to get consumer group metrics", e);
             }
@@ -38,8 +40,13 @@ public class TopicConsumerOffset {
         return metrics;
     }
 
-    private static ArrayList<TopicConsumerEntity> getGroupMetric(ConfigCluster configCluster, String group) {
-        ArrayList<TopicConsumerEntity> metrics = new ArrayList<>();
+    private static TopicGroupEntity getGroupMetric(ConfigCluster configCluster, String group) {
+        TopicGroupEntity topicGroup = new TopicGroupEntity();
+        List<TopicConsumerEntity> consumers = new LinkedList<>();
+        topicGroup.setConsumers(consumers);
+        topicGroup.setCluster(configCluster.getName());
+        topicGroup.setGroup(group);
+        StopWatch totalStopWatch = StopWatch.createStarted();
         //请求消费者组信息
         var partitionAssignmentStateList = getGroupDescribe(configCluster, group);
         for (var partitionAssignmentState : partitionAssignmentStateList) {
@@ -52,8 +59,8 @@ public class TopicConsumerOffset {
             String consumerId = partitionAssignmentState.consumerId().getOrElse(MissColumnValues.STRING);
             String host = partitionAssignmentState.host().getOrElse(MissColumnValues.STRING);
             String clientId = partitionAssignmentState.clientId().getOrElse(MissColumnValues.STRING);
-            log.info("group: {}, topic: {}, partition: {}, offset: {}, logEndOffset: {}, lag: {}, consumerId: {}, host: {}, clientId: {}",
-                    group, topic, partition, offset, logEndOffset, lag, consumerId, host, clientId);
+            log.info("cluster: {}, group: {}, topic: {}, partition: {}, offset: {}, logEndOffset: {}, lag: {}, consumerId: {}, host: {}, clientId: {}",
+                    configCluster.getName(), group, topic, partition, offset, logEndOffset, lag, consumerId, host, clientId);
             var metric = new TopicConsumerEntity(
                     group,
                     topic,
@@ -66,16 +73,18 @@ public class TopicConsumerOffset {
                     consumerId,
                     host,
                     clientId);
-            metrics.add(metric);
+            consumers.add(metric);
         }
+        topicGroup.setTime(totalStopWatch.getTime());
+        log.info("Finish to collect consumer group metrics, cluster: {}, group: {}, time: {}ms", configCluster.getName(), group, totalStopWatch.getTime());
         //返回消费者组的消费信息
-        return metrics;
+        return topicGroup;
     }
 
     private static List<String> listGroups(ConfigCluster configCluster) {
         String brokerList = String.join(",", configCluster.getBrokers());
         String[] args = {"--bootstrap-server", brokerList};
-        List<String> groups = new ArrayList<>();
+        List<String> groups = new LinkedList<>();
         KafkaConsumerGroupService consumerGroupService = null;
         try {
             consumerGroupService = getKafkaConsumerGroupService(args);
@@ -98,12 +107,12 @@ public class TopicConsumerOffset {
             consumerGroupService = getKafkaConsumerGroupService(args);
             var describeGroup = consumerGroupService.describeGroup();
             if (describeGroup._2().isEmpty()) {
-                return new ArrayList<>();
+                return new LinkedList<>();
             }
             return JavaConverters.seqAsJavaListConverter(describeGroup._2().get()).asJava();
         }catch (Exception e) {
             log.error("Failed to describe group, cluster: {}, group: {}", configCluster.getName(), group, e);
-            return new ArrayList<>();
+            return new LinkedList<>();
         } finally {
             if (consumerGroupService != null) {
                 consumerGroupService.close();

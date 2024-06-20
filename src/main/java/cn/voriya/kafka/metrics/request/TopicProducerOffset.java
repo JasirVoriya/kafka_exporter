@@ -34,7 +34,7 @@ public class TopicProducerOffset {
     private static final String CLIENT_ID = "GetOffsetJavaAPI";
 
     @SneakyThrows
-    public static ArrayList<TopicProducerEntity> get(ConfigCluster configCluster) {
+    public static List<TopicProducerEntity> get(ConfigCluster configCluster) {
         RequestInfoMap requestInfoMap = new RequestInfoMap();
         //获取topic元数据
         List<TopicMetadata> topicMetadataList;
@@ -47,9 +47,9 @@ public class TopicProducerOffset {
                     100000).topicsMetadata()).asJava();
         } catch (Exception e) {
             log.error("Failed to get topic metadata, cluster:{}", configCluster.getName(), e);
-            return new ArrayList<>();
+            return new LinkedList<>();
         }
-        ArrayList<TopicProducerEntity> metrics = new ArrayList<>();
+        List<TopicProducerEntity> metrics = new LinkedList<>();
         //遍历topic元数据
         for (TopicMetadata topicMetadata : topicMetadataList) {
             //遍历partition元数据
