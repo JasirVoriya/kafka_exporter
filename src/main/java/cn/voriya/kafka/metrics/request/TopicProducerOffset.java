@@ -74,7 +74,13 @@ public class TopicProducerOffset {
             //构建leader的请求信息
             OffsetRequest offsetRequest = new OffsetRequest(requestInfoMap.get(leader), 0, 0);
             //发送请求
-            Map<TopicAndPartition, PartitionOffsetsResponse> responseMap = JavaConverters.mapAsJavaMapConverter(consumer.getOffsetsBefore(offsetRequest).partitionErrorAndOffsets()).asJava();
+            Map<TopicAndPartition, PartitionOffsetsResponse> responseMap;
+            try {
+                responseMap = JavaConverters.mapAsJavaMapConverter(consumer.getOffsetsBefore(offsetRequest).partitionErrorAndOffsets()).asJava();
+            } catch (Exception e) {
+                log.error("Failed to get producer offset, cluster: {}, leader: {}", configCluster.getName(), leader, e);
+                continue;
+            }
             responseMap.forEach((topicAndPartition, partitionOffsetsResponse) -> {
                 Seq<Object> offsets = partitionOffsetsResponse.offsets();
                 Long offset = (Long) offsets.apply(0);
