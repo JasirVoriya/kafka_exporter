@@ -24,22 +24,17 @@ public class KafkaCollector extends Collector {
     //分隔符
     private static final String DELIMITER = "@&@";
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    private Map<String, MetricFamilySamples> samples = new HashMap<>();
+    private Map<String, MetricFamilySamples> cache = new HashMap<>();
     private final Object lock = new Object();
 
     public KafkaCollector() {
-        this.updateSamples();
-        scheduler.scheduleAtFixedRate(this::updateSamples, 0, Config.getInstance().getInterval(), TimeUnit.SECONDS);
+        this.updateCache();
+        scheduler.scheduleAtFixedRate(this::updateCache, 0, Config.getInstance().getInterval(), TimeUnit.SECONDS);
     }
 
-    private void updateSamples() {
+    private void updateCache() {
         synchronized (lock) {
-            this.samples.clear();
-            lock.notifyAll();
-        }
-        Map<String, MetricFamilySamples> samples = getAllClusterMetrics();
-        synchronized (lock) {
-            this.samples = samples;
+            this.cache = getAllClusterMetrics();
             lock.notifyAll();
         }
     }
@@ -47,14 +42,7 @@ public class KafkaCollector extends Collector {
     @Override
     public List<MetricFamilySamples> collect() {
         synchronized (lock) {
-            while (samples.isEmpty()) {
-                try {
-                    lock.wait(500);
-                } catch (InterruptedException e) {
-                    log.error("Interrupted while waiting for samples", e);
-                }
-            }
-            return new ArrayList<>(samples.values());
+            return new ArrayList<>(cache.values());
         }
     }
 
