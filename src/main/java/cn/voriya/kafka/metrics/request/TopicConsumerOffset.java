@@ -26,7 +26,7 @@ public class TopicConsumerOffset {
         List<String> groups = listGroups(configCluster);
         for (String group : groups) {
             //多线程，每个消费者组一个线程，获取消费者组的消费信息
-            futures.add(ThreadPool.CONSUMER_METRICS_POOL.submit(() -> getGroupMetric(configCluster, group)));
+            futures.add(ThreadPool.VIRTUAL_EXECUTOR.submit(() -> getGroupMetric(configCluster, group)));
         }
         //获取所有消费者组的消费信息，合并到一个列表
         for (var future : futures) {

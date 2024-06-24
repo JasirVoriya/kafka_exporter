@@ -2,9 +2,7 @@ package cn.voriya.kafka.metrics.thread;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class ThreadPool {
     public static final ThreadPoolExecutor CONSUMER_METRICS_POOL = new ThreadPoolExecutor(
@@ -18,4 +16,5 @@ public class ThreadPool {
             TimeUnit.MINUTES,
             new ArrayBlockingQueue<>(1000),
             new ThreadFactoryBuilder().setNameFormat("kafka-clusters-%d").setDaemon(true).build());
+    public static final ExecutorService VIRTUAL_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 }
