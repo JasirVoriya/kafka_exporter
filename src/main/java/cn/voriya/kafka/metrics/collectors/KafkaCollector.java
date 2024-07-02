@@ -37,6 +37,7 @@ public class KafkaCollector extends Collector {
 
     private void updateCache() {
         if (lock.tryLock()) {
+            log.info("Start to update cache, try lock success");
             cache = new HashMap<>();
             try {
                 cache = getAllClusterMetrics();
@@ -44,6 +45,7 @@ public class KafkaCollector extends Collector {
                 log.error("Failed to update cache", e);
             } finally {
                 lock.unlock();
+                log.info("Finish to update cache, unlock success");
             }
         } else {
             log.error("Failed to update cache, try lock failed, maybe last task is running");
