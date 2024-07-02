@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 public class KafkaCollector extends Collector {
     //分隔符
     private static final String DELIMITER = "@&@";
-    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
     private Map<String, MetricFamilySamples> cache = new HashMap<>();
     private final Object lock = new Object();
 
@@ -50,6 +50,7 @@ public class KafkaCollector extends Collector {
         Map<String, MetricFamilySamples> samples = new HashMap<>();
         StopWatch totalStopWatch = StopWatch.createStarted();
         try{
+            log.info("Start to collect all kafka metrics");
             Config config = Config.getInstance();
             List<Future<Map<String, MetricFamilySamples>>> futures = new LinkedList<>();
             //每个集群提交到一个线程里面去采集
