@@ -83,9 +83,15 @@ public class TopicProducerOffset {
             }
             responseMap.forEach((topicAndPartition, partitionOffsetsResponse) -> {
                 Seq<Object> offsets = partitionOffsetsResponse.offsets();
-                Long offset = (Long) offsets.apply(0);
-                metrics.add(new TopicProducerEntity(topicAndPartition.topic(), topicAndPartition.partition(), offset, String.format("%s:%d", leader.host(), leader.port())));
+                Long offset;
+                try {
+                    offset = (Long) offsets.apply(0);
+                    metrics.add(new TopicProducerEntity(topicAndPartition.topic(), topicAndPartition.partition(), offset, String.format("%s:%d", leader.host(), leader.port())));
+                } catch (Exception e) {
+                    log.error("Failed to get producer offset, cluster: {}, leader: {}, topic: {}, partition: {}", configCluster.getName(), leader, topicAndPartition.topic(), topicAndPartition.partition(), e);
+                }
             });
+            consumer.close();
         }
         return metrics;
     }
