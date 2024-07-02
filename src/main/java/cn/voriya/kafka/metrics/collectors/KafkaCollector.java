@@ -9,41 +9,54 @@ import cn.voriya.kafka.metrics.metrics.*;
 import cn.voriya.kafka.metrics.request.TopicConsumerOffset;
 import cn.voriya.kafka.metrics.request.TopicProducerOffset;
 import cn.voriya.kafka.metrics.thread.ThreadPool;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.prometheus.client.Collector;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.time.StopWatch;
 
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Log4j2
 public class KafkaCollector extends Collector {
     //分隔符
     private static final String DELIMITER = "@&@";
-    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
-    private Map<String, MetricFamilySamples> cache = new HashMap<>();
-    private final Object lock = new Object();
+    private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private static final ExecutorService executor = Executors.newFixedThreadPool(
+            5,
+            new ThreadFactoryBuilder().setNameFormat("kafka-collector-%d").setDaemon(true).build()
+    );
+    private volatile Map<String, MetricFamilySamples> cache = new HashMap<>();
+    private final Lock lock = new ReentrantLock();
 
     public KafkaCollector() {
-        this.updateCache();
-        scheduler.scheduleAtFixedRate(this::updateCache, 0, Config.getInstance().getInterval(), TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(() -> executor.submit(this::updateCache), 0, Config.getInstance().getInterval(), TimeUnit.SECONDS);
     }
 
     private void updateCache() {
-        synchronized (lock) {
-            this.cache = getAllClusterMetrics();
-            lock.notifyAll();
+        if (lock.tryLock()) {
+            cache = new HashMap<>();
+            try {
+                cache = getAllClusterMetrics();
+            } catch (Exception e) {
+                log.error("Failed to update cache", e);
+            } finally {
+                lock.unlock();
+            }
+        } else {
+            log.error("Failed to update cache, try lock failed, maybe last task is running");
         }
     }
 
     @Override
     public List<MetricFamilySamples> collect() {
-        synchronized (lock) {
-            return new ArrayList<>(cache.values());
+        Map<String, MetricFamilySamples> res = cache;
+        if (res.isEmpty()) {
+            log.warn("Failed to collect kafka metrics, cache is empty");
         }
+        return new ArrayList<>(res.values());
     }
 
     private Map<String, MetricFamilySamples> getAllClusterMetrics() {
@@ -62,6 +75,7 @@ public class KafkaCollector extends Collector {
                     ExporterClusterTimeMetric exporterClusterTimeMetric = new ExporterClusterTimeMetric();
                     exporterClusterTimeMetric.add(configCluster.getName(), clusterStopWatch.getTime());
                     clusterMetrics.put(exporterClusterTimeMetric.name, exporterClusterTimeMetric);
+                    Thread.sleep(60 * 1000);
                     log.info("Finish to collect kafka metrics, cluster: [{}], time: {}ms", configCluster.getName(), clusterStopWatch.getTime());
                     return clusterMetrics;
                 }));
