@@ -75,7 +75,6 @@ public class KafkaCollector extends Collector {
                     ExporterClusterTimeMetric exporterClusterTimeMetric = new ExporterClusterTimeMetric();
                     exporterClusterTimeMetric.add(configCluster.getName(), clusterStopWatch.getTime());
                     clusterMetrics.put(exporterClusterTimeMetric.name, exporterClusterTimeMetric);
-                    Thread.sleep(60 * 1000);
                     log.info("Finish to collect kafka metrics, cluster: [{}], time: {}ms", configCluster.getName(), clusterStopWatch.getTime());
                     return clusterMetrics;
                 }));
