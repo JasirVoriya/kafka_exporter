@@ -24,6 +24,7 @@ public class TopicConsumerOffset {
         List<Future<TopicGroupEntity>> futures = new LinkedList<>();
         //获取所有消费者组
         List<String> groups = listGroups(configCluster);
+        log.info("Get consumer groups, cluster: {}, groups: {}", configCluster.getName(), groups);
         for (String group : groups) {
             //多线程，每个消费者组一个线程，获取消费者组的消费信息
             futures.add(ThreadPool.VIRTUAL_EXECUTOR.submit(() -> getGroupMetric(configCluster, group)));
