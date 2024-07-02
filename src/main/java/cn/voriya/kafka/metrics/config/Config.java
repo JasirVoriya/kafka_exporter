@@ -89,5 +89,5 @@ public class Config {
     }
     private List<ConfigCluster> cluster;
     private Integer port = 4399;
-    private Integer interval = 15;
+    private Integer interval = 60;
 }
