@@ -28,7 +28,7 @@ public class TopicConsumerOffset {
 
     private static final Map<String, Set<String>> clusterGroupsCache = new ConcurrentHashMap<>();
 
-    public static Map<String, Long> getClusterFailCount(String cluster, int minCount, int maxCount) {
+    public static Map<String, Long> getClusterFailCount(String cluster, long minCount, long maxCount) {
         Map<String, Long> clusterFailCount = TopicConsumerOffset.clusterFailCount.get(cluster);
         if (clusterFailCount == null) {
             return new HashMap<>();

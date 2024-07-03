@@ -19,17 +19,17 @@ public class ConsumerFailCountHandler extends AbstractHttpHandler {
         }
 
         exchange.sendResponseHeaders(200, 0);
-        int minCount;
+        long minCount;
         try {
-            minCount = Integer.parseInt(params.get("min-count"));
+            minCount = Long.parseLong(params.get("min-count"));
         } catch (Exception e) {
             minCount = 0;
         }
-        int maxCount;
+        long maxCount;
         try {
-            maxCount = Integer.parseInt(params.get("max-count"));
+            maxCount = Long.parseLong(params.get("max-count"));
         } catch (Exception e) {
-            maxCount = Integer.MAX_VALUE;
+            maxCount = Long.MAX_VALUE;
         }
         exchange.getResponseBody().write(JacksonUtil.toJson(TopicConsumerOffset.getClusterFailCount(cluster, minCount, maxCount)).getBytes());
     }
