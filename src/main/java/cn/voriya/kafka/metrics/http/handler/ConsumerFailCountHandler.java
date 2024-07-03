@@ -10,6 +10,14 @@ import java.util.Map;
 public class ConsumerFailCountHandler extends AbstractHttpHandler {
     @Override
     protected void get(HttpExchange exchange, Map<String, String> params) throws IOException {
+
+        String cluster = params.get("cluster");
+        if (cluster == null) {
+            exchange.sendResponseHeaders(400, 0);
+            exchange.getResponseBody().write("cluster is required".getBytes());
+            return;
+        }
+
         exchange.sendResponseHeaders(200, 0);
         int minCount;
         try {
@@ -23,7 +31,7 @@ public class ConsumerFailCountHandler extends AbstractHttpHandler {
         } catch (Exception e) {
             maxCount = Integer.MAX_VALUE;
         }
-        exchange.getResponseBody().write(JacksonUtil.toJson(TopicConsumerOffset.getFailCount(minCount, maxCount)).getBytes());
+        exchange.getResponseBody().write(JacksonUtil.toJson(TopicConsumerOffset.getClusterFailCount(cluster, minCount, maxCount)).getBytes());
     }
 }
 

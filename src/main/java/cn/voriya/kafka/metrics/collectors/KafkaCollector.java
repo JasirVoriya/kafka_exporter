@@ -84,13 +84,13 @@ public class KafkaCollector extends Collector {
             //获取每个集群的采集结果
             for (Future<Map<String, MetricFamilySamples>> future : futures) {
                 Map<String, MetricFamilySamples> clusterMetrics = future.get();
-                for (Map.Entry<String, MetricFamilySamples> entry : clusterMetrics.entrySet()) {
-                    if (!samples.containsKey(entry.getKey())) {
-                        samples.put(entry.getKey(), entry.getValue());
-                        continue;
+                clusterMetrics.forEach((key, value) -> {
+                    if (!samples.containsKey(key)) {
+                        samples.put(key, value);
+                        return;
                     }
-                    samples.get(entry.getKey()).samples.addAll(entry.getValue().samples);
-                }
+                    samples.get(key).samples.addAll(value.samples);
+                });
             }
             log.info("Finish to collect all kafka metrics, total time: {}ms", totalStopWatch.getTime());
         } catch (Exception e) {

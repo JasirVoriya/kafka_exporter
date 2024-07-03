@@ -7,7 +7,6 @@ import cn.voriya.kafka.metrics.entity.TopicGroupEntity;
 import cn.voriya.kafka.metrics.thread.ThreadPool;
 import kafka.admin.AdminClient;
 import kafka.coordinator.group.GroupOverview;
-import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.kafka.clients.admin.AdminClientConfig;
@@ -25,27 +24,40 @@ import static kafka.admin.ConsumerGroupCommand.*;
 
 @Log4j2
 public class TopicConsumerOffset {
-    private static final Map<String, Long> failCount = new ConcurrentHashMap<>();
+    private static final Map<String, Map<String, Long>> clusterFailCount = new ConcurrentHashMap<>();
 
-    @Getter
-    private static final Set<String> groupsCache = ConcurrentHashMap.newKeySet();
+    private static final Map<String, Set<String>> clusterGroupsCache = new ConcurrentHashMap<>();
 
-    public static Map<String, Long> getFailCount(int minCount, int maxCount) {
-        Map<String, Long> failCount = new HashMap<>();
-        for (var entry : TopicConsumerOffset.failCount.entrySet()) {
+    public static Map<String, Long> getClusterFailCount(String cluster, int minCount, int maxCount) {
+        Map<String, Long> clusterFailCount = TopicConsumerOffset.clusterFailCount.get(cluster);
+        if (clusterFailCount == null) {
+            return new HashMap<>();
+        }
+        Map<String, Long> res = new HashMap<>();
+        for (var entry : clusterFailCount.entrySet()) {
             if (entry.getValue() >= minCount && entry.getValue() <= maxCount) {
-                failCount.put(entry.getKey(), entry.getValue());
+                res.put(entry.getKey(), entry.getValue());
             }
         }
-        return failCount;
+        return res;
+    }
+
+    public static Set<String> getClusterGroupsCache(String cluster) {
+        Set<String> res = TopicConsumerOffset.clusterGroupsCache.get(cluster);
+        if (res == null) {
+            return new HashSet<>();
+        }
+        return res;
     }
     public static List<TopicGroupEntity> get(ConfigCluster configCluster) {
         List<TopicGroupEntity> metrics = new LinkedList<>();
         List<Future<TopicGroupEntity>> futures = new LinkedList<>();
+        clusterGroupsCache.putIfAbsent(configCluster.getName(), ConcurrentHashMap.newKeySet());
         //获取所有消费者组
-        groupsCache.addAll(listGroups(configCluster));
-        log.info("Get consumer groups, cluster: {}, groups: {}", configCluster.getName(), groupsCache);
-        for (String group : groupsCache) {
+        Set<String> groupCache = clusterGroupsCache.get(configCluster.getName());
+        groupCache.addAll(listGroups(configCluster));
+        log.info("Get consumer groups, cluster: {}, groups: {}", configCluster.getName(), clusterGroupsCache);
+        for (String group : groupCache) {
             //多线程，每个消费者组一个线程，获取消费者组的消费信息
             futures.add(ThreadPool.GROUP_POOL.submit(() -> getGroupMetric(configCluster, group)));
         }
@@ -152,6 +164,8 @@ public class TopicConsumerOffset {
     }
 
     private static List<PartitionAssignmentState> getGroupDescribe(ConfigCluster configCluster, String group) {
+        clusterFailCount.putIfAbsent(configCluster.getName(), new ConcurrentHashMap<>());
+        Map<String, Long> failCount = clusterFailCount.get(configCluster.getName());
         String brokerList = String.join(",", configCluster.getBrokers());
         String[] args = {"--bootstrap-server", brokerList, "--group", group, "--describe"};
         KafkaConsumerGroupService consumerGroupService = null;
@@ -160,7 +174,7 @@ public class TopicConsumerOffset {
             var describeGroup = consumerGroupService.describeGroup();
             if (describeGroup._2().isEmpty()) {
                 failCount.put(group, failCount.getOrDefault(group, 0L) + 1);
-                log.error("The consumer group {} does not exist. cluster: {}, fail count: {}", group, configCluster.getName(), failCount.get(group));
+                log.error("The consumer group {} does not exist. cluster: {}, fail count: {}", group, configCluster.getName(), clusterFailCount.get(group));
                 return new LinkedList<>();
             }
             String state = describeGroup._1().get();
@@ -176,12 +190,12 @@ public class TopicConsumerOffset {
                 case "Dead":
                 default:
                     failCount.put(group, failCount.getOrDefault(group, 0L) + 1);
-                    log.error("Consumer group {} state is {}, that does not exist, cluster: {}, fail count: {}", group, state, configCluster.getName(), failCount.get(group));
+                    log.error("Consumer group {} state is {}, that does not exist, cluster: {}, fail count: {}", group, state, configCluster.getName(), clusterFailCount.get(group));
                     return new LinkedList<>();
             }
         }catch (Exception e) {
             failCount.put(group, failCount.getOrDefault(group, 0L) + 1);
-            log.error("Failed to describe group, cluster: {}, group: {}, fail count: {}", configCluster.getName(), group, failCount.get(group), e);
+            log.error("Failed to describe group, cluster: {}, group: {}, fail count: {}", configCluster.getName(), group, clusterFailCount.get(group), e);
             return new LinkedList<>();
         } finally {
             if (consumerGroupService != null) {
