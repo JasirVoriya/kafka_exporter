@@ -12,9 +12,9 @@ public class ThreadPool {
             TimeUnit.MINUTES,
             new ArrayBlockingQueue<>(1000),
             new ThreadFactoryBuilder().setNameFormat("kafka-clusters-%d").setDaemon(true).build());
-    public static final ExecutorService VIRTUAL_EXECUTOR = new ThreadPoolExecutor(
-            Runtime.getRuntime().availableProcessors() * 20,
-            Runtime.getRuntime().availableProcessors() * 20,
+    public static final ExecutorService GROUP_POOL = new ThreadPoolExecutor(
+            Runtime.getRuntime().availableProcessors() * 100,
+            Runtime.getRuntime().availableProcessors() * 100,
             0,
             TimeUnit.MINUTES,
             new ArrayBlockingQueue<>(1000),
