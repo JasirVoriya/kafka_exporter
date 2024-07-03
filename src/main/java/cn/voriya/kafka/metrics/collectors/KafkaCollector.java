@@ -62,7 +62,7 @@ public class KafkaCollector extends Collector {
     }
 
     private Map<String, MetricFamilySamples> getAllClusterMetrics() {
-        Map<String, MetricFamilySamples> samples = new HashMap<>();
+        Map<String, MetricFamilySamples> metrics = new HashMap<>();
         StopWatch totalStopWatch = StopWatch.createStarted();
         try{
             log.info("Start to collect all kafka metrics");
@@ -85,11 +85,11 @@ public class KafkaCollector extends Collector {
             for (Future<Map<String, MetricFamilySamples>> future : futures) {
                 Map<String, MetricFamilySamples> clusterMetrics = future.get();
                 clusterMetrics.forEach((key, value) -> {
-                    if (!samples.containsKey(key)) {
-                        samples.put(key, value);
+                    if (!metrics.containsKey(key)) {
+                        metrics.put(key, value);
                         return;
                     }
-                    samples.get(key).samples.addAll(value.samples);
+                    metrics.get(key).samples.addAll(value.samples);
                 });
             }
             log.info("Finish to collect all kafka metrics, total time: {}ms", totalStopWatch.getTime());
@@ -98,8 +98,8 @@ public class KafkaCollector extends Collector {
         }
         ExporterTotalTimeMetric exporterTotalTimeMetric = new ExporterTotalTimeMetric();
         exporterTotalTimeMetric.add(totalStopWatch.getTime());
-        samples.put(exporterTotalTimeMetric.name, exporterTotalTimeMetric);
-        return samples;
+        metrics.put(exporterTotalTimeMetric.name, exporterTotalTimeMetric);
+        return metrics;
     }
 
     private Map<String, MetricFamilySamples> getClusterMetrics(ConfigCluster configCluster) {
@@ -107,15 +107,18 @@ public class KafkaCollector extends Collector {
         List<TopicProducerEntity> topicProducers = TopicProducerOffset.get(configCluster);
         //查询所有消费者组的offset和lag
         List<TopicGroupEntity> topicGroups = TopicConsumerOffset.get(configCluster);
-        //time metrics
+        //exporter metrics
         ExporterGroupTimeMetric exporterGroupTimeMetric = new ExporterGroupTimeMetric();
-        //metrics
+        ExporterGroupFailCountMetric exporterGroupFailCountMetric = new ExporterGroupFailCountMetric();
+        //kafka metrics
         ProducerOffsetMetric producerOffsetMetric = new ProducerOffsetMetric();
         ConsumerOffsetMetric consumerOffsetMetric = new ConsumerOffsetMetric();
         ConsumerLagMetric consumerLagMetric = new ConsumerLagMetric();
         ConsumerGroupOffsetMetric consumerGroupOffsetMetric = new ConsumerGroupOffsetMetric();
         ConsumerGroupLagMetric consumerGroupLagMetric = new ConsumerGroupLagMetric();
         //start make metrics
+        Map<String, Long> failCount = TopicConsumerOffset.getClusterFailCount(configCluster.getName(), 0L, Long.MAX_VALUE);
+        exporterGroupFailCountMetric.add(failCount, configCluster);
         List<TopicConsumerEntity> topicConsumers = new LinkedList<>();
         topicGroups.forEach(group -> {
             topicConsumers.addAll(group.getConsumers());
@@ -156,6 +159,7 @@ public class KafkaCollector extends Collector {
             put(consumerLagMetric.name, consumerLagMetric);
             put(consumerGroupOffsetMetric.name, consumerGroupOffsetMetric);
             put(consumerGroupLagMetric.name, consumerGroupLagMetric);
+            put(exporterGroupFailCountMetric.name, exporterGroupFailCountMetric);
         }};
     }
 }
