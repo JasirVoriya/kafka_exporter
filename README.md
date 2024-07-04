@@ -105,7 +105,7 @@ You can add one or more kafka clusters to the `cluster` field, and the exporter 
     * API:
 
    | Path      | Method | Description                    |
-            |-----------|--------|--------------------------------|
+   |-----------|--------|--------------------------------|
    | `/config` | GET    | Get the exporter configuration |
 
     * Example:
@@ -118,7 +118,7 @@ You can add one or more kafka clusters to the `cluster` field, and the exporter 
     * API:
 
    | Path      | Method  | Description               |
-            |-----------|---------|---------------------------|
+   |-----------|---------|---------------------------|
    | `/config` | POST    | Add or update the cluster |
 
     * Body:
@@ -161,13 +161,13 @@ You can add one or more kafka clusters to the `cluster` field, and the exporter 
     * API:
 
    | Path      | Method  | Description               |
-            |-----------|---------|---------------------------|
+   |-----------|---------|---------------------------|
    | `/config` | DELETE  | Remove cluster by name    |
 
     * Query:
 
    | Query         | Type   | Description      | Default | Required |
-            |---------------|--------|------------------|---------|----------|
+   |---------------|--------|------------------|---------|----------|
    | `clusterName` | String | The cluster name |         | Yes      |
 
     * Example:
@@ -183,13 +183,13 @@ You can add one or more kafka clusters to the `cluster` field, and the exporter 
     * API:
 
    | Path               | Method | Description                        |
-            |--------------------|--------|------------------------------------|
+   |--------------------|--------|------------------------------------|
    | `/consumer-groups` | GET    | Get the consumer group information |
 
     * Query:
 
    | Query     | Type   | Description      | Default | Required |
-            |-----------|--------|------------------|---------|----------|
+   |-----------|--------|------------------|---------|----------|
    | `cluster` | String | The cluster name |         | Yes      |
 
     * Example:
@@ -203,13 +203,13 @@ You can add one or more kafka clusters to the `cluster` field, and the exporter 
     * API:
 
    | Path                   | Method | Description                         |
-            |------------------------|--------|-------------------------------------|
+   |------------------------|--------|-------------------------------------|
    | `/consumer-fail-count` | GET    | Get the consumer group failed count |
 
     * Query:
 
    | Query       | Type   | Description                                | Default        | Required |
-            |-------------|--------|--------------------------------------------|----------------|----------|
+   |-------------|--------|--------------------------------------------|----------------|----------|
    | `cluster`   | String | The cluster name                           |                | Yes      |
    | `min-count` | Number | The minimum count of failed consumer group | 0              | No       |
    | `max-count` | Number | The maximum count of failed consumer group | Long.MAX_VALUE | No       |
