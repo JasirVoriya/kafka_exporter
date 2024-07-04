@@ -5,11 +5,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.ObjectUtils;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.util.List;
 
 @Data
@@ -53,7 +53,7 @@ public class Config {
         }
     }
 
-    public static void parseConfig(String path) {
+    public static void parseConfigFromYaml(String path) {
         //解析配置文件
         Yaml yaml = new Yaml();
         File file = new File(path);
@@ -63,6 +63,31 @@ public class Config {
             log.error("parse config error", e);
         }
     }
+
+    public static void parseConfigFromJson(String path) {
+        //解析配置文件
+        try {
+            String jsonString = Files.readString(new File(path).toPath());
+            instance = JacksonUtil.toObject(jsonString, Config.class);
+        } catch (Exception e) {
+            log.error("parse config error", e);
+        }
+    }
+
+    public static void parseConfig() {
+        String yamlFilePath = getDefaultConfigPath() + "conf.yaml";
+        String jsonFilePath = getDefaultConfigPath() + "conf.json";
+        if (new File(yamlFilePath).exists()) {
+            log.info("parse config from yaml file: {}", yamlFilePath);
+            parseConfigFromYaml(yamlFilePath);
+        } else if (new File(jsonFilePath).exists()) {
+            log.info("parse config from json file: {}", jsonFilePath);
+            parseConfigFromJson(jsonFilePath);
+        } else {
+            log.warn("config file not found");
+        }
+    }
     private List<ConfigCluster> cluster;
-    private String port = "1234";
+    private Integer port = 4399;
+    private Integer interval = 60;
 }

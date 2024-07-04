@@ -10,9 +10,9 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2
 public class ExporterApplication {
     public static void main(String[] args) {
-        Config.parseConfig(Config.getDefaultConfigPath() + "conf.yaml");
+        Config.parseConfig();
         Config config = Config.getInstance();
-        int port = Integer.parseInt(config.getPort());
+        int port = config.getPort();
         for (ConfigCluster configCluster : config.getCluster()) {
             log.info("cluster: {}", configCluster);
         }

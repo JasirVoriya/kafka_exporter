@@ -12,4 +12,5 @@ import java.util.List;
 public class ConfigCluster {
     private String name;
     private List<String> brokers;
+    private List<String> zookeepers;
 }
