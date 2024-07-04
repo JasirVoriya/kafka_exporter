@@ -174,7 +174,7 @@ public class TopicConsumerOffset {
             var describeGroup = consumerGroupService.describeGroup();
             if (describeGroup._2().isEmpty()) {
                 failCount.put(group, failCount.getOrDefault(group, 0L) + 1);
-                log.error("The consumer group {} does not exist. cluster: {}, fail count: {}", group, configCluster.getName(), clusterFailCount.get(group));
+                log.error("The consumer group {} does not exist. cluster: {}, fail count: {}", group, configCluster.getName(), failCount.get(group));
                 return new LinkedList<>();
             }
             String state = describeGroup._1().get();
@@ -190,12 +190,12 @@ public class TopicConsumerOffset {
                 case "Dead":
                 default:
                     failCount.put(group, failCount.getOrDefault(group, 0L) + 1);
-                    log.error("Consumer group {} state is {}, that does not exist, cluster: {}, fail count: {}", group, state, configCluster.getName(), clusterFailCount.get(group));
+                    log.error("Consumer group {} state is {}, that does not exist, cluster: {}, fail count: {}", group, state, configCluster.getName(), failCount.get(group));
                     return new LinkedList<>();
             }
         }catch (Exception e) {
             failCount.put(group, failCount.getOrDefault(group, 0L) + 1);
-            log.error("Failed to describe group, cluster: {}, group: {}, fail count: {}", configCluster.getName(), group, clusterFailCount.get(group), e);
+            log.error("Failed to describe group, cluster: {}, group: {}, fail count: {}", configCluster.getName(), group, failCount.get(group), e);
             return new LinkedList<>();
         } finally {
             if (consumerGroupService != null) {
