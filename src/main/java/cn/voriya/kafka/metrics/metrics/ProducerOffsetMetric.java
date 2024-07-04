@@ -1,7 +1,7 @@
 package cn.voriya.kafka.metrics.metrics;
 
 import cn.voriya.kafka.metrics.config.ConfigCluster;
-import cn.voriya.kafka.metrics.entity.TopicProducerResponse;
+import cn.voriya.kafka.metrics.entity.TopicProducerEntity;
 import io.prometheus.client.Collector;
 
 import java.util.Arrays;
@@ -18,7 +18,7 @@ public class ProducerOffsetMetric extends Collector.MetricFamilySamples {
         );
     }
 
-    public void add(TopicProducerResponse res, ConfigCluster configCluster) {
+    public void add(TopicProducerEntity res, ConfigCluster configCluster) {
         this.samples.add(new Sample(
                 this.name,
                 List.of("cluster", "topic", "partition", "leader"),

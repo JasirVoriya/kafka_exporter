@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class TopicProducerResponse {
+public class TopicProducerEntity {
     private String topic;
     private Integer partition;
     private Long offset;

@@ -1,7 +1,6 @@
 package cn.voriya.kafka.metrics;
 
 import cn.voriya.kafka.metrics.collectors.KafkaCollector;
-import cn.voriya.kafka.metrics.collectors.TestCollector;
 import cn.voriya.kafka.metrics.config.Config;
 import cn.voriya.kafka.metrics.config.ConfigCluster;
 import cn.voriya.kafka.metrics.http.ExporterHttpServer;
@@ -13,13 +12,12 @@ public class ExporterApplication {
     public static void main(String[] args) {
         Config.parseConfig();
         Config config = Config.getInstance();
-        int port = Integer.parseInt(config.getPort());
+        int port = config.getPort();
         for (ConfigCluster configCluster : config.getCluster()) {
             log.info("cluster: {}", configCluster);
         }
         try (HTTPServer ignored = ExporterHttpServer.create(port)) {
             new KafkaCollector().register();
-            new TestCollector().register();
             log.info("server started on port {}", port);
             log.info("Kafka Exporter started");
             Thread.currentThread().join();
