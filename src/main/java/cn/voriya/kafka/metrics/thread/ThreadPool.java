@@ -12,12 +12,12 @@ public class ThreadPool {
             TimeUnit.MINUTES,
             new ArrayBlockingQueue<>(1000),
             new ThreadFactoryBuilder().setNameFormat("kafka-clusters-%d").setDaemon(true).build());
-    public static final ExecutorService GROUP_POOL = new ThreadPoolExecutor(
+    public static final ExecutorService CONSUMER_POOL = new ThreadPoolExecutor(
             Runtime.getRuntime().availableProcessors() * 100,
             Runtime.getRuntime().availableProcessors() * 100,
             0,
             TimeUnit.MINUTES,
             new ArrayBlockingQueue<>(1000),
-            new ThreadFactoryBuilder().setNameFormat("kafka-clusters-%d").setDaemon(true).build()
+            new ThreadFactoryBuilder().setNameFormat("kafka-consumers-%d").setDaemon(true).build()
     );
 }
