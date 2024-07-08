@@ -103,8 +103,8 @@ public class TopicConsumerOffset {
             String consumerId = partitionAssignmentState.consumerId().getOrElse(MissColumnValues.STRING);
             String host = partitionAssignmentState.host().getOrElse(MissColumnValues.STRING);
             String clientId = partitionAssignmentState.clientId().getOrElse(MissColumnValues.STRING);
-//            log.info("cluster: {}, group: {}, topic: {}, partition: {}, offset: {}, logEndOffset: {}, lag: {}, consumerId: {}, host: {}, clientId: {}",
-//                    configCluster.getName(), group, topic, partition, offset, logEndOffset, lag, consumerId, host, clientId);
+            log.info("cluster: {}, group: {}, topic: {}, partition: {}, offset: {}, logEndOffset: {}, lag: {}, consumerId: {}, host: {}, clientId: {}",
+                    configCluster.getName(), group, topic, partition, offset, logEndOffset, lag, consumerId, host, clientId);
             var metric = new TopicConsumerEntity(
                     group,
                     topic,
@@ -120,7 +120,7 @@ public class TopicConsumerOffset {
             consumers.add(metric);
         }
         topicGroup.setTime(totalStopWatch.getTime());
-//        log.info("Finish to collect consumer group metrics, cluster: {}, group: {}, time: {}ms", configCluster.getName(), group, totalStopWatch.getTime());
+        log.info("Finish to collect consumer group metrics, cluster: {}, group: {}, time: {}ms", configCluster.getName(), group, totalStopWatch.getTime());
         //返回消费者组的消费信息
         return topicGroup;
     }
