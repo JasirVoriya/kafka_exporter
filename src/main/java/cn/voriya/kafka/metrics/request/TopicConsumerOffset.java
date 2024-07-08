@@ -130,10 +130,8 @@ public class TopicConsumerOffset {
         log.info("Start to refresh group list");
         List<ConfigCluster> clusters = Config.getInstance().getCluster();
         for (ConfigCluster cluster : clusters) {
-            clusterGroupsCache.putIfAbsent(cluster.getName(), ConcurrentHashMap.newKeySet());
             //获取所有消费者组
-            Set<String> groupCache = clusterGroupsCache.get(cluster.getName());
-            groupCache.addAll(listGroups(cluster));
+            clusterGroupsCache.put(cluster.getName(), listGroups(cluster));
         }
         log.info("Finish to refresh group list, time:{}ms", stopWatch.getTime());
     }
@@ -146,6 +144,8 @@ public class TopicConsumerOffset {
     }
 
     private static Set<String> listGroupsFromZookeeper(ConfigCluster configCluster) {
+        StopWatch stopWatch = StopWatch.createStarted();
+        log.info("List groups from zookeeper, cluster: {}", configCluster.getName());
         String zookeeperList = String.join(",", configCluster.getZookeepers());
         Set<String> groups = new HashSet<>();
         ZooKeeper zooKeeper = null;
@@ -164,10 +164,13 @@ public class TopicConsumerOffset {
                 log.error("Failed to close zookeeper", e);
             }
         }
+        log.info("Finish to list groups from zookeeper, cluster: {}, time: {}ms", configCluster.getName(), stopWatch.getTime());
         return groups;
     }
 
     private static Set<String> listGroupsFromKafkaAdmin(ConfigCluster configCluster) {
+        StopWatch stopWatch = StopWatch.createStarted();
+        log.info("List groups from kafka admin, cluster: {}", configCluster.getName());
         String brokerList = String.join(",", configCluster.getBrokers());
         Properties properties = new Properties();
         properties.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, brokerList);
@@ -184,6 +187,7 @@ public class TopicConsumerOffset {
                 adminClient.close();
             }
         }
+        log.info("Finish to list groups from kafka admin, cluster: {}, time: {}ms", configCluster.getName(), stopWatch.getTime());
         return groups;
     }
 
