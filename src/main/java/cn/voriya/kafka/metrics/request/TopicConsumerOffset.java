@@ -1,9 +1,11 @@
 package cn.voriya.kafka.metrics.request;
 
 import cn.voriya.kafka.metrics.column.MissColumnValues;
+import cn.voriya.kafka.metrics.config.Config;
 import cn.voriya.kafka.metrics.config.ConfigCluster;
 import cn.voriya.kafka.metrics.entity.TopicConsumerEntity;
 import cn.voriya.kafka.metrics.entity.TopicGroupEntity;
+import cn.voriya.kafka.metrics.thread.SchedulerPool;
 import cn.voriya.kafka.metrics.thread.ThreadPool;
 import kafka.admin.AdminClient;
 import kafka.coordinator.group.GroupOverview;
@@ -18,6 +20,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static kafka.admin.ConsumerGroupCommand.*;
@@ -27,6 +30,16 @@ public class TopicConsumerOffset {
     private static final Map<String, Map<String, Long>> clusterFailCount = new ConcurrentHashMap<>();
 
     private static final Map<String, Set<String>> clusterGroupsCache = new ConcurrentHashMap<>();
+
+    static {
+        refreshGroups();
+        SchedulerPool.submit(
+                TopicConsumerOffset::refreshGroups,
+                "refresh group list",
+                5,
+                5,
+                TimeUnit.MINUTES);
+    }
 
     public static Map<String, Long> getClusterFailCount(String cluster, long minCount, long maxCount) {
         Map<String, Long> clusterFailCount = TopicConsumerOffset.clusterFailCount.get(cluster);
@@ -52,14 +65,12 @@ public class TopicConsumerOffset {
     public static List<TopicGroupEntity> get(ConfigCluster configCluster) {
         List<TopicGroupEntity> metrics = new LinkedList<>();
         List<Future<TopicGroupEntity>> futures = new LinkedList<>();
-        clusterGroupsCache.putIfAbsent(configCluster.getName(), ConcurrentHashMap.newKeySet());
         //获取所有消费者组
-        Set<String> groupCache = clusterGroupsCache.get(configCluster.getName());
-        groupCache.addAll(listGroups(configCluster));
+        Set<String> groupCache = clusterGroupsCache.getOrDefault(configCluster.getName(), ConcurrentHashMap.newKeySet());
         log.info("Get consumer groups, cluster: {}, groups: {}", configCluster.getName(), clusterGroupsCache);
         for (String group : groupCache) {
             //多线程，每个消费者组一个线程，获取消费者组的消费信息
-            futures.add(ThreadPool.GROUP_POOL.submit(() -> getGroupMetric(configCluster, group)));
+            futures.add(ThreadPool.CONSUMER_POOL.submit(() -> getGroupMetric(configCluster, group)));
         }
         //获取所有消费者组的消费信息，合并到一个列表
         for (var future : futures) {
@@ -92,8 +103,8 @@ public class TopicConsumerOffset {
             String consumerId = partitionAssignmentState.consumerId().getOrElse(MissColumnValues.STRING);
             String host = partitionAssignmentState.host().getOrElse(MissColumnValues.STRING);
             String clientId = partitionAssignmentState.clientId().getOrElse(MissColumnValues.STRING);
-            log.info("cluster: {}, group: {}, topic: {}, partition: {}, offset: {}, logEndOffset: {}, lag: {}, consumerId: {}, host: {}, clientId: {}",
-                    configCluster.getName(), group, topic, partition, offset, logEndOffset, lag, consumerId, host, clientId);
+//            log.info("cluster: {}, group: {}, topic: {}, partition: {}, offset: {}, logEndOffset: {}, lag: {}, consumerId: {}, host: {}, clientId: {}",
+//                    configCluster.getName(), group, topic, partition, offset, logEndOffset, lag, consumerId, host, clientId);
             var metric = new TopicConsumerEntity(
                     group,
                     topic,
@@ -109,9 +120,22 @@ public class TopicConsumerOffset {
             consumers.add(metric);
         }
         topicGroup.setTime(totalStopWatch.getTime());
-        log.info("Finish to collect consumer group metrics, cluster: {}, group: {}, time: {}ms", configCluster.getName(), group, totalStopWatch.getTime());
+//        log.info("Finish to collect consumer group metrics, cluster: {}, group: {}, time: {}ms", configCluster.getName(), group, totalStopWatch.getTime());
         //返回消费者组的消费信息
         return topicGroup;
+    }
+
+    private static void refreshGroups() {
+        StopWatch stopWatch = StopWatch.createStarted();
+        log.info("Start to refresh group list");
+        List<ConfigCluster> clusters = Config.getInstance().getCluster();
+        for (ConfigCluster cluster : clusters) {
+            clusterGroupsCache.putIfAbsent(cluster.getName(), ConcurrentHashMap.newKeySet());
+            //获取所有消费者组
+            Set<String> groupCache = clusterGroupsCache.get(cluster.getName());
+            groupCache.addAll(listGroups(cluster));
+        }
+        log.info("Finish to refresh group list, time:{}ms", stopWatch.getTime());
     }
 
     private static Set<String> listGroups(ConfigCluster configCluster) {
