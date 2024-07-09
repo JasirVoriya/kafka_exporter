@@ -40,11 +40,18 @@ public class KafkaCollector extends Collector {
 
     @Override
     public List<MetricFamilySamples> collect() {
-        Map<String, MetricFamilySamples> res = cache;
-        if (res.isEmpty()) {
+        StopWatch stopWatch = StopWatch.createStarted();
+        while (cache.isEmpty() && stopWatch.getTime() < 10000) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                log.error("Failed to collect kafka metrics, sleep error", e);
+            }
+        }
+        if (cache.isEmpty()) {
             log.warn("Failed to collect kafka metrics, cache is empty");
         }
-        return new ArrayList<>(res.values());
+        return new ArrayList<>(cache.values());
     }
 
     private Map<String, MetricFamilySamples> getAllClusterMetrics() {
