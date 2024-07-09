@@ -196,10 +196,10 @@ public class TopicConsumerOffset {
         Map<String, Long> failCount = clusterFailCount.get(configCluster.getName());
         String brokerList = String.join(",", configCluster.getBrokers());
         String[] args = {"--bootstrap-server", brokerList, "--group", group, "--describe"};
-        KafkaConsumerGroupService consumerGroupService = null;
+        ConsumerGroupService consumerGroupService = null;
         try {
-            consumerGroupService = getKafkaConsumerGroupService(args);
-            var describeGroup = consumerGroupService.describeGroup();
+            consumerGroupService = getConsumerGroupService(args);
+            var describeGroup = consumerGroupService.collectGroupOffsets();
             if (describeGroup._2().isEmpty()) {
                 failCount.put(group, failCount.getOrDefault(group, 0L) + 1);
                 log.error("The consumer group {} does not exist. cluster: {}, fail count: {}", group, configCluster.getName(), failCount.get(group));
@@ -232,8 +232,8 @@ public class TopicConsumerOffset {
         }
     }
 
-    private static KafkaConsumerGroupService getKafkaConsumerGroupService(String[] args) {
+    private static ConsumerGroupService getConsumerGroupService(String[] args) {
         ConsumerGroupCommandOptions commandOptions = new ConsumerGroupCommandOptions(args);
-        return new KafkaConsumerGroupService(commandOptions);
+        return new ConsumerGroupService(commandOptions);
     }
 }
