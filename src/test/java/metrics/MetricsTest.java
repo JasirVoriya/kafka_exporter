@@ -1,5 +1,6 @@
 package metrics;
 
+import cn.voriya.kafka.metrics.config.Config;
 import cn.voriya.kafka.metrics.config.ConfigCluster;
 import cn.voriya.kafka.metrics.entity.TopicConsumerEntity;
 import cn.voriya.kafka.metrics.entity.TopicGroupEntity;
@@ -8,18 +9,14 @@ import cn.voriya.kafka.metrics.request.TopicConsumerOffset;
 import cn.voriya.kafka.metrics.request.TopicProducerOffset;
 import lombok.SneakyThrows;
 
-import java.util.Arrays;
 import java.util.List;
 
 public class MetricsTest {
-    private static final String brokerList = "10.178.75.211:9092,10.178.75.212:9092,10.178.75.213:9092";
-    private static final ConfigCluster configCluster = new ConfigCluster() {{
-        setBrokers(Arrays.asList(brokerList.split(",")));
-        setName("dev1");//
-    }};
 
     @SneakyThrows
     public static void main(String[] args) {
+        Config.parseConfig();
+        ConfigCluster configCluster = Config.getInstance().getCluster().getFirst();
 //        统计执行时间
         long start = System.currentTimeMillis();
         {
