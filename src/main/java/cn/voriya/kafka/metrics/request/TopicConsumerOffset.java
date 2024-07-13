@@ -7,14 +7,16 @@ import cn.voriya.kafka.metrics.entity.TopicConsumerEntity;
 import cn.voriya.kafka.metrics.entity.TopicGroupEntity;
 import cn.voriya.kafka.metrics.thread.SchedulerPool;
 import cn.voriya.kafka.metrics.thread.ThreadPool;
-import kafka.admin.AdminClient;
-import kafka.coordinator.group.GroupOverview;
+import kafka.admin.ConsumerGroupCommand.ConsumerGroupService;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.time.StopWatch;
+import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.ConsumerGroupListing;
 import org.apache.kafka.common.Node;
 import org.apache.zookeeper.ZooKeeper;
 import scala.collection.JavaConverters;
+import scala.collection.immutable.Map$;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,7 +25,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static kafka.admin.ConsumerGroupCommand.*;
+import static kafka.admin.ConsumerGroupCommand.ConsumerGroupCommandOptions;
+import static kafka.admin.ConsumerGroupCommand.PartitionAssignmentState;
 
 @Log4j2
 public class TopicConsumerOffset {
@@ -154,7 +157,7 @@ public class TopicConsumerOffset {
             });
             groups.addAll(zooKeeper.getChildren("/consumers", false));
         } catch (Exception e) {
-            log.error("Failed to list groups, cluster: {}", configCluster.getName(), e);
+            log.error("Failed to list groups from zookeeper, cluster: {}", configCluster.getName(), e);
         } finally {
             try {
                 if (zooKeeper != null) {
@@ -175,17 +178,11 @@ public class TopicConsumerOffset {
         Properties properties = new Properties();
         properties.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, brokerList);
         Set<String> groups = new HashSet<>();
-        AdminClient adminClient = null;
-        try {
-            adminClient = AdminClient.create(properties);
-            List<GroupOverview> overviews = JavaConverters.seqAsJavaListConverter(adminClient.listAllGroupsFlattened()).asJava();
-            groups.addAll(overviews.stream().map(GroupOverview::groupId).collect(Collectors.toSet()));
+        try (AdminClient adminClient = AdminClient.create(properties)) {
+            var overviews = adminClient.listConsumerGroups().all().get();
+            groups.addAll(overviews.stream().map(ConsumerGroupListing::groupId).collect(Collectors.toSet()));
         } catch (Exception e) {
             log.error("Failed to list groups, cluster: {}", configCluster.getName(), e);
-        } finally {
-            if (adminClient != null) {
-                adminClient.close();
-            }
         }
         log.info("Finish to list groups from kafka admin, cluster: {}, time: {}ms", configCluster.getName(), stopWatch.getTime());
         return groups;
@@ -199,7 +196,7 @@ public class TopicConsumerOffset {
         ConsumerGroupService consumerGroupService = null;
         try {
             consumerGroupService = getConsumerGroupService(args);
-            var describeGroup = consumerGroupService.collectGroupOffsets();
+            var describeGroup = consumerGroupService.collectGroupOffsets(group);
             if (describeGroup._2().isEmpty()) {
                 failCount.put(group, failCount.getOrDefault(group, 0L) + 1);
                 log.error("The consumer group {} does not exist. cluster: {}, fail count: {}", group, configCluster.getName(), failCount.get(group));
@@ -234,6 +231,6 @@ public class TopicConsumerOffset {
 
     private static ConsumerGroupService getConsumerGroupService(String[] args) {
         ConsumerGroupCommandOptions commandOptions = new ConsumerGroupCommandOptions(args);
-        return new ConsumerGroupService(commandOptions);
+        return new ConsumerGroupService(commandOptions, Map$.MODULE$.empty());
     }
 }
