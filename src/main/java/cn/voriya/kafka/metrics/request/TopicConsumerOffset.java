@@ -20,7 +20,6 @@ import scala.collection.immutable.Map$;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -83,7 +82,7 @@ public class TopicConsumerOffset {
         for (var future : futures) {
             try {
                 metrics.add(future.get());
-            } catch (InterruptedException | ExecutionException e) {
+            } catch (Exception e) {
                 log.error("Failed to get consumer group metrics", e);
             }
         }
@@ -110,8 +109,6 @@ public class TopicConsumerOffset {
             String consumerId = partitionAssignmentState.consumerId().getOrElse(MissColumnValues.STRING);
             String host = partitionAssignmentState.host().getOrElse(MissColumnValues.STRING);
             String clientId = partitionAssignmentState.clientId().getOrElse(MissColumnValues.STRING);
-            log.info("cluster: {}, group: {}, topic: {}, partition: {}, offset: {}, logEndOffset: {}, lag: {}, consumerId: {}, host: {}, clientId: {}",
-                    configCluster.getName(), group, topic, partition, offset, logEndOffset, lag, consumerId, host, clientId);
             var metric = new TopicConsumerEntity(
                     group,
                     topic,
@@ -144,8 +141,10 @@ public class TopicConsumerOffset {
     }
 
     private static Set<String> listGroups(ConfigCluster configCluster) {
-        Set<String> groups = new HashSet<>();
-        groups.addAll(listGroupsFromKafkaAdmin(configCluster));
+        Set<String> groups = new HashSet<>(listGroupsFromKafkaAdmin(configCluster));
+        if (configCluster.getZookeepers().isEmpty() || configCluster.isDisableZk()) {
+            return groups;
+        }
         groups.addAll(listGroupsFromZookeeper(configCluster));
         return groups;
     }
