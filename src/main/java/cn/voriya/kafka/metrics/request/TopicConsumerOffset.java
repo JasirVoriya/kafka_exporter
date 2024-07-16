@@ -72,6 +72,10 @@ public class TopicConsumerOffset {
         Set<String> groupCache = clusterGroupsCache.getOrDefault(configCluster.getName(), ConcurrentHashMap.newKeySet());
         log.info("Get consumer groups, cluster: {}, groups: {}", configCluster.getName(), clusterGroupsCache);
         for (String group : groupCache) {
+            if (configCluster.getGroupBlackList().contains(group)) {
+                log.info("Skip group: {} in black list", group);
+                continue;
+            }
             //多线程，每个消费者组一个线程，获取消费者组的消费信息
             futures.add(ThreadPool.CONSUMER_POOL.submit(() -> getGroupMetric(configCluster, group)));
         }
