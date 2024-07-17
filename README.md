@@ -27,7 +27,7 @@ _✨ For Prometheus ✨_
 </p>
 
 <p align="center">
-Based on the kafka-0.11.0.3 version of the monitoring index exporter, support prometheus monitoring.
+Based on the kafka-2.5.0 version of the monitoring index exporter, support prometheus monitoring.
 </p>
 
 ## Get started
