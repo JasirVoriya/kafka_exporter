@@ -1,32 +1,47 @@
 package cn.voriya.kafka.metrics.request;
 
 import cn.voriya.kafka.metrics.column.MissColumnValues;
+import cn.voriya.kafka.metrics.config.Config;
 import cn.voriya.kafka.metrics.config.ConfigCluster;
 import cn.voriya.kafka.metrics.entity.TopicConsumerEntity;
 import cn.voriya.kafka.metrics.entity.TopicGroupEntity;
+import cn.voriya.kafka.metrics.thread.SchedulerPool;
 import cn.voriya.kafka.metrics.thread.ThreadPool;
-import kafka.admin.AdminClient;
-import kafka.coordinator.group.GroupOverview;
+import kafka.admin.ConsumerGroupCommand.ConsumerGroupService;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.time.StopWatch;
+import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.ConsumerGroupListing;
 import org.apache.kafka.common.Node;
 import org.apache.zookeeper.ZooKeeper;
 import scala.collection.JavaConverters;
+import scala.collection.immutable.Map$;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static kafka.admin.ConsumerGroupCommand.*;
+import static kafka.admin.ConsumerGroupCommand.ConsumerGroupCommandOptions;
+import static kafka.admin.ConsumerGroupCommand.PartitionAssignmentState;
 
 @Log4j2
 public class TopicConsumerOffset {
     private static final Map<String, Map<String, Long>> clusterFailCount = new ConcurrentHashMap<>();
 
     private static final Map<String, Set<String>> clusterGroupsCache = new ConcurrentHashMap<>();
+
+    static {
+        refreshGroups();
+        SchedulerPool.submit(
+                TopicConsumerOffset::refreshGroups,
+                "refresh group list",
+                5,
+                5,
+                TimeUnit.MINUTES);
+    }
 
     public static Map<String, Long> getClusterFailCount(String cluster, long minCount, long maxCount) {
         Map<String, Long> clusterFailCount = TopicConsumerOffset.clusterFailCount.get(cluster);
@@ -52,20 +67,22 @@ public class TopicConsumerOffset {
     public static List<TopicGroupEntity> get(ConfigCluster configCluster) {
         List<TopicGroupEntity> metrics = new LinkedList<>();
         List<Future<TopicGroupEntity>> futures = new LinkedList<>();
-        clusterGroupsCache.putIfAbsent(configCluster.getName(), ConcurrentHashMap.newKeySet());
         //获取所有消费者组
-        Set<String> groupCache = clusterGroupsCache.get(configCluster.getName());
-        groupCache.addAll(listGroups(configCluster));
+        Set<String> groupCache = clusterGroupsCache.getOrDefault(configCluster.getName(), ConcurrentHashMap.newKeySet());
         log.info("Get consumer groups, cluster: {}, groups: {}", configCluster.getName(), clusterGroupsCache);
         for (String group : groupCache) {
+            if (configCluster.getGroupBlackList().contains(group)) {
+                log.info("Skip group: {} in black list", group);
+                continue;
+            }
             //多线程，每个消费者组一个线程，获取消费者组的消费信息
-            futures.add(ThreadPool.GROUP_POOL.submit(() -> getGroupMetric(configCluster, group)));
+            futures.add(ThreadPool.CONSUMER_POOL.submit(() -> getGroupMetric(configCluster, group)));
         }
         //获取所有消费者组的消费信息，合并到一个列表
         for (var future : futures) {
             try {
                 metrics.add(future.get());
-            } catch (InterruptedException | ExecutionException e) {
+            } catch (Exception e) {
                 log.error("Failed to get consumer group metrics", e);
             }
         }
@@ -92,8 +109,6 @@ public class TopicConsumerOffset {
             String consumerId = partitionAssignmentState.consumerId().getOrElse(MissColumnValues.STRING);
             String host = partitionAssignmentState.host().getOrElse(MissColumnValues.STRING);
             String clientId = partitionAssignmentState.clientId().getOrElse(MissColumnValues.STRING);
-            log.info("cluster: {}, group: {}, topic: {}, partition: {}, offset: {}, logEndOffset: {}, lag: {}, consumerId: {}, host: {}, clientId: {}",
-                    configCluster.getName(), group, topic, partition, offset, logEndOffset, lag, consumerId, host, clientId);
             var metric = new TopicConsumerEntity(
                     group,
                     topic,
@@ -114,14 +129,29 @@ public class TopicConsumerOffset {
         return topicGroup;
     }
 
+    private static void refreshGroups() {
+        StopWatch stopWatch = StopWatch.createStarted();
+        log.info("Start to refresh group list");
+        List<ConfigCluster> clusters = Config.getInstance().getCluster();
+        for (ConfigCluster cluster : clusters) {
+            //获取所有消费者组
+            clusterGroupsCache.put(cluster.getName(), listGroups(cluster));
+        }
+        log.info("Finish to refresh group list, time:{}ms", stopWatch.getTime());
+    }
+
     private static Set<String> listGroups(ConfigCluster configCluster) {
-        Set<String> groups = new HashSet<>();
-        groups.addAll(listGroupsFromKafkaAdmin(configCluster));
+        Set<String> groups = new HashSet<>(listGroupsFromKafkaAdmin(configCluster));
+        if (configCluster.getZookeepers().isEmpty() || configCluster.isDisableZk()) {
+            return groups;
+        }
         groups.addAll(listGroupsFromZookeeper(configCluster));
         return groups;
     }
 
     private static Set<String> listGroupsFromZookeeper(ConfigCluster configCluster) {
+        StopWatch stopWatch = StopWatch.createStarted();
+        log.info("List groups from zookeeper, cluster: {}", configCluster.getName());
         String zookeeperList = String.join(",", configCluster.getZookeepers());
         Set<String> groups = new HashSet<>();
         ZooKeeper zooKeeper = null;
@@ -130,7 +160,7 @@ public class TopicConsumerOffset {
             });
             groups.addAll(zooKeeper.getChildren("/consumers", false));
         } catch (Exception e) {
-            log.error("Failed to list groups, cluster: {}", configCluster.getName(), e);
+            log.error("Failed to list groups from zookeeper, cluster: {}", configCluster.getName(), e);
         } finally {
             try {
                 if (zooKeeper != null) {
@@ -140,26 +170,24 @@ public class TopicConsumerOffset {
                 log.error("Failed to close zookeeper", e);
             }
         }
+        log.info("Finish to list groups from zookeeper, cluster: {}, time: {}ms", configCluster.getName(), stopWatch.getTime());
         return groups;
     }
 
     private static Set<String> listGroupsFromKafkaAdmin(ConfigCluster configCluster) {
+        StopWatch stopWatch = StopWatch.createStarted();
+        log.info("List groups from kafka admin, cluster: {}", configCluster.getName());
         String brokerList = String.join(",", configCluster.getBrokers());
         Properties properties = new Properties();
         properties.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, brokerList);
         Set<String> groups = new HashSet<>();
-        AdminClient adminClient = null;
-        try {
-            adminClient = AdminClient.create(properties);
-            List<GroupOverview> overviews = JavaConverters.seqAsJavaListConverter(adminClient.listAllGroupsFlattened()).asJava();
-            groups.addAll(overviews.stream().map(GroupOverview::groupId).collect(Collectors.toSet()));
+        try (AdminClient adminClient = AdminClient.create(properties)) {
+            var overviews = adminClient.listConsumerGroups().all().get();
+            groups.addAll(overviews.stream().map(ConsumerGroupListing::groupId).collect(Collectors.toSet()));
         } catch (Exception e) {
             log.error("Failed to list groups, cluster: {}", configCluster.getName(), e);
-        } finally {
-            if (adminClient != null) {
-                adminClient.close();
-            }
         }
+        log.info("Finish to list groups from kafka admin, cluster: {}, time: {}ms", configCluster.getName(), stopWatch.getTime());
         return groups;
     }
 
@@ -168,10 +196,10 @@ public class TopicConsumerOffset {
         Map<String, Long> failCount = clusterFailCount.get(configCluster.getName());
         String brokerList = String.join(",", configCluster.getBrokers());
         String[] args = {"--bootstrap-server", brokerList, "--group", group, "--describe"};
-        KafkaConsumerGroupService consumerGroupService = null;
+        ConsumerGroupService consumerGroupService = null;
         try {
-            consumerGroupService = getKafkaConsumerGroupService(args);
-            var describeGroup = consumerGroupService.describeGroup();
+            consumerGroupService = getConsumerGroupService(args);
+            var describeGroup = consumerGroupService.collectGroupOffsets(group);
             if (describeGroup._2().isEmpty()) {
                 failCount.put(group, failCount.getOrDefault(group, 0L) + 1);
                 log.error("The consumer group {} does not exist. cluster: {}, fail count: {}", group, configCluster.getName(), failCount.get(group));
@@ -204,8 +232,8 @@ public class TopicConsumerOffset {
         }
     }
 
-    private static KafkaConsumerGroupService getKafkaConsumerGroupService(String[] args) {
+    private static ConsumerGroupService getConsumerGroupService(String[] args) {
         ConsumerGroupCommandOptions commandOptions = new ConsumerGroupCommandOptions(args);
-        return new KafkaConsumerGroupService(commandOptions);
+        return new ConsumerGroupService(commandOptions, Map$.MODULE$.empty());
     }
 }

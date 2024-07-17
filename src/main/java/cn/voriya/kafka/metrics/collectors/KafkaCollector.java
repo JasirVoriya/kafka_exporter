@@ -8,57 +8,50 @@ import cn.voriya.kafka.metrics.entity.TopicProducerEntity;
 import cn.voriya.kafka.metrics.metrics.*;
 import cn.voriya.kafka.metrics.request.TopicConsumerOffset;
 import cn.voriya.kafka.metrics.request.TopicProducerOffset;
+import cn.voriya.kafka.metrics.thread.SchedulerPool;
 import cn.voriya.kafka.metrics.thread.ThreadPool;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.prometheus.client.Collector;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.time.StopWatch;
 
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 @Log4j2
 public class KafkaCollector extends Collector {
     //分隔符
     private static final String DELIMITER = "@&@";
-    private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private static final ExecutorService executor = Executors.newFixedThreadPool(
-            5,
-            new ThreadFactoryBuilder().setNameFormat("kafka-collector-%d").setDaemon(true).build()
-    );
     private volatile Map<String, MetricFamilySamples> cache = new HashMap<>();
-    private final Lock lock = new ReentrantLock();
 
     public KafkaCollector() {
-        scheduler.scheduleAtFixedRate(() -> executor.submit(this::updateCache), 0, Config.getInstance().getInterval(), TimeUnit.SECONDS);
+        SchedulerPool.submit(
+                this::updateCache,
+                "update cache",
+                0,
+                Config.getInstance().getInterval(),
+                TimeUnit.SECONDS);
     }
 
     private void updateCache() {
-        if (lock.tryLock()) {
-            log.info("Start to update cache, try lock success");
-            cache = new HashMap<>();
-            try {
-                cache = getAllClusterMetrics();
-            } catch (Exception e) {
-                log.error("Failed to update cache", e);
-            } finally {
-                lock.unlock();
-                log.info("Finish to update cache, unlock success");
-            }
-        } else {
-            log.error("Failed to update cache, try lock failed, maybe last task is running");
-        }
+        cache = new HashMap<>();
+        cache = getAllClusterMetrics();
     }
 
     @Override
     public List<MetricFamilySamples> collect() {
-        Map<String, MetricFamilySamples> res = cache;
-        if (res.isEmpty()) {
+        StopWatch stopWatch = StopWatch.createStarted();
+        while (cache.isEmpty() && stopWatch.getTime() < 10000) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                log.error("Failed to collect kafka metrics, sleep error", e);
+            }
+        }
+        if (cache.isEmpty()) {
             log.warn("Failed to collect kafka metrics, cache is empty");
         }
-        return new ArrayList<>(res.values());
+        return new ArrayList<>(cache.values());
     }
 
     private Map<String, MetricFamilySamples> getAllClusterMetrics() {

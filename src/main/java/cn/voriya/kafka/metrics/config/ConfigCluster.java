@@ -4,13 +4,16 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class ConfigCluster {
     private String name;
-    private List<String> brokers;
-    private List<String> zookeepers;
+    private Set<String> brokers;
+    private Set<String> zookeepers = new HashSet<>();
+    private Set<String> groupBlackList = new HashSet<>();
+    private boolean disableZk = true;
 }
