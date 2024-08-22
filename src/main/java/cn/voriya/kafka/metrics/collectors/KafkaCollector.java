@@ -105,8 +105,6 @@ public class KafkaCollector extends Collector {
         ExporterGroupFailCountMetric exporterGroupFailCountMetric = new ExporterGroupFailCountMetric();
         //kafka metrics
         ProducerOffsetMetric producerOffsetMetric = new ProducerOffsetMetric();
-        ConsumerOffsetMetric consumerOffsetMetric = new ConsumerOffsetMetric();
-        ConsumerLagMetric consumerLagMetric = new ConsumerLagMetric();
         ConsumerGroupOffsetMetric consumerGroupOffsetMetric = new ConsumerGroupOffsetMetric();
         ConsumerGroupLagMetric consumerGroupLagMetric = new ConsumerGroupLagMetric();
         //start make metrics
@@ -140,16 +138,12 @@ public class KafkaCollector extends Collector {
             if (topicProducerEntity != null) {
                 res.setLeader(topicProducerEntity.getLeader());
             }
-            consumerOffsetMetric.add(res, configCluster);
-            consumerLagMetric.add(res, configCluster);
             consumerGroupLagMetric.add(res, configCluster);
             consumerGroupOffsetMetric.add(res, configCluster);
         }
         return new HashMap<>() {{
             put(exporterGroupTimeMetric.name, exporterGroupTimeMetric);
             put(producerOffsetMetric.name, producerOffsetMetric);
-            put(consumerOffsetMetric.name, consumerOffsetMetric);
-            put(consumerLagMetric.name, consumerLagMetric);
             put(consumerGroupOffsetMetric.name, consumerGroupOffsetMetric);
             put(consumerGroupLagMetric.name, consumerGroupLagMetric);
             put(exporterGroupFailCountMetric.name, exporterGroupFailCountMetric);
