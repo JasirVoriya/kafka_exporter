@@ -15,5 +15,5 @@ public class ConfigCluster {
     private Set<String> brokers;
     private Set<String> zookeepers = new HashSet<>();
     private Set<String> groupBlackList = new HashSet<>();
-    private boolean disableZk = false;
+    private boolean enableZk = true;
 }

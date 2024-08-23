@@ -27,7 +27,7 @@ public class KafkaCollector extends Collector {
     public KafkaCollector() {
         SchedulerPool.submit(
                 this::updateCache,
-                "update cache",
+                "update metric cache",
                 0,
                 Config.getInstance().getInterval(),
                 TimeUnit.SECONDS);
