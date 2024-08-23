@@ -17,6 +17,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class TopicProducerOffset {
@@ -41,7 +42,7 @@ public class TopicProducerOffset {
             Properties properties = new Properties();
             properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, String.join(",", cluster.getBrokers()));
             properties.put(ConsumerConfig.CLIENT_ID_CONFIG, CLIENT_ID);
-            try (KafkaConsumer<byte[], byte[]> kafkaConsumer = new KafkaConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
+            try (var kafkaConsumer = new KafkaConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
                 try {
                     clusterTopicsCache.put(cluster.getName(), kafkaConsumer.listTopics());
                 } catch (Exception e) {
@@ -54,18 +55,32 @@ public class TopicProducerOffset {
 
     @SneakyThrows
     public static List<TopicProducerEntity> get(ConfigCluster configCluster) {
+        //获取topic元数据
+        var topics = clusterTopicsCache.get(configCluster.getName());
+        return getTopicProducerEntities(configCluster, topics);
+    }
+
+    static List<TopicProducerEntity> getTopicProducerEntities(ConfigCluster configCluster, Collection<String> topics) {
+        var clusterTopics = clusterTopicsCache.get(configCluster.getName());
+        Map<String, List<PartitionInfo>> topicPartitionMap = clusterTopics.entrySet().stream()
+                .filter(entry -> topics.contains(entry.getKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        return getTopicProducerEntities(configCluster, topicPartitionMap);
+    }
+
+    private static List<TopicProducerEntity> getTopicProducerEntities(ConfigCluster configCluster, Map<String, List<PartitionInfo>> topics) {
         Properties properties = new Properties();
         properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, String.join(",", configCluster.getBrokers()));
         properties.put(ConsumerConfig.CLIENT_ID_CONFIG, CLIENT_ID);
         List<TopicProducerEntity> metrics;
-        //获取topic元数据
-        Map<String, List<PartitionInfo>> topics = clusterTopicsCache.get(configCluster.getName());
-        try (KafkaConsumer<byte[], byte[]> kafkaConsumer = new KafkaConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
+        try (var kafkaConsumer = new KafkaConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
             metrics = new LinkedList<>();
             List<TopicPartition> topicPartitions = new ArrayList<>();
             Map<TopicPartition, Node> topicPartitionNodeMap = new HashMap<>();
             //遍历topic元数据
-            topics.forEach((topic, partitionInfos) -> {
+            for (var entry : topics.entrySet()) {
+                String topic = entry.getKey();
+                List<PartitionInfo> partitionInfos = entry.getValue();
                 for (PartitionInfo partitionInfo : partitionInfos) {
                     if (partitionInfo.leader() == null) {
                         continue;
@@ -74,7 +89,7 @@ public class TopicProducerOffset {
                     topicPartitions.add(topicPartition);
                     topicPartitionNodeMap.put(topicPartition, partitionInfo.leader());
                 }
-            });
+            }
             //遍历每个leader的请求信息，开始请求offset
 
             Map<TopicPartition, Long> endOffsets;
@@ -84,15 +99,17 @@ public class TopicProducerOffset {
                 log.error("Failed to get producer offset, cluster: {}", configCluster.getName(), e);
                 return metrics;
             }
-            endOffsets.forEach((topicPartition, offset) -> {
-                Node leader = topicPartitionNodeMap.get(topicPartition);
+            for (var entry : endOffsets.entrySet()) {
+                TopicPartition tp = entry.getKey();
+                Long offset = entry.getValue();
+                Node leader = topicPartitionNodeMap.get(tp);
                 try {
-                    metrics.add(new TopicProducerEntity(topicPartition.topic(), topicPartition.partition(), offset, String.format("%s:%d", leader.host(), leader.port())));
+                    metrics.add(new TopicProducerEntity(tp.topic(), tp.partition(), offset, String.format("%s:%d", leader.host(), leader.port())));
                 } catch (Exception e) {
                     log.error("Failed to get producer offset, cluster: {}, leader: {}, topic: {}, partition: {}",
-                            configCluster.getName(), leader, topicPartition.topic(), topicPartition.partition(), e);
+                            configCluster.getName(), leader, tp.topic(), tp.partition(), e);
                 }
-            });
+            }
         }
         return metrics;
     }
